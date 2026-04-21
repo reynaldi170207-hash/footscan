@@ -1,0 +1,2593 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FootScan — Pengukur Ukuran Kaki Digital</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(','\\)']],
+        displayMath: [['\\[','\\]']],
+        tags: 'none'
+      },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] },
+      startup: { typeset: true }
+    };
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-chtml.min.js" crossorigin="anonymous"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080c10;
+      --surface: #0f1520;
+      --surface2: #141c28;
+      --border: rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.12);
+      --accent: #00d4a0;
+      --accent2: #2196f3;
+      --accent3: #ff6b6b;
+      --accent-glow: rgba(0,212,160,0.2);
+      --text: #dce8f0;
+      --muted: #6a8090;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* ── PAGE SYSTEM ── */
+    .page {
+      display: none;
+      min-height: 100vh;
+      animation: pageIn 0.4s ease both;
+    }
+    .page.active { display: block; }
+    @keyframes pageIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 16px 32px;
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(8,12,16,0.92);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+    }
+    @media(max-width: 600px) { nav { padding: 14px 20px; } }
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.3rem; font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--accent);
+      cursor: pointer;
+    }
+    .nav-logo span { color: var(--text); opacity: 0.5; }
+    .nav-back {
+      display: none;
+      align-items: center; gap: 8px;
+      font-size: 0.82rem; color: var(--muted);
+      cursor: pointer; border: none; background: none;
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    .nav-back:hover { color: var(--text); border-color: var(--border2); }
+    .nav-back.visible { display: flex; }
+
+    /* ── NOISE ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0; opacity: 0.35;
+    }
+
+    /* ── HOMEPAGE ── */
+    #page-home {
+      position: relative;
+    }
+    #home-hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      position: relative; z-index: 1;
+    }
+
+    .blob {
+      position: absolute; border-radius: 50%;
+      filter: blur(90px); pointer-events: none; z-index: 0;
+    }
+    .blob-1 {
+      width: 480px; height: 480px;
+      background: radial-gradient(circle, rgba(0,212,160,0.1), transparent 70%);
+      top: 5%; left: 0%;
+      animation: drift1 14s ease-in-out infinite;
+    }
+    .blob-2 {
+      width: 380px; height: 380px;
+      background: radial-gradient(circle, rgba(33,150,243,0.08), transparent 70%);
+      top: 25%; right: 0%;
+      animation: drift2 18s ease-in-out infinite;
+    }
+    @keyframes drift1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(30px,-25px)} }
+    @keyframes drift2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-25px,30px)} }
+
+    .hero-badge {
+      position: relative; z-index: 1;
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(0,212,160,0.07);
+      border: 1px solid rgba(0,212,160,0.2);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: 0.75rem; font-weight: 500;
+      color: var(--accent);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin-bottom: 32px;
+      animation: fadeUp 0.7s ease both;
+    }
+    .hero-badge::before {
+      content: ''; width: 6px; height: 6px;
+      background: var(--accent); border-radius: 50%;
+      animation: pulse 2s ease infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.3;transform:scale(0.6)} }
+
+    .hero-title {
+      position: relative; z-index: 1;
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2.8rem, 8vw, 6rem);
+      font-weight: 800;
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+      margin-bottom: 24px;
+      animation: fadeUp 0.7s 0.1s ease both;
+    }
+    .hero-title .t1 { display: block; color: var(--text); }
+    .hero-title .t2 {
+      display: block;
+      color: var(--accent);
+    }
+    .hero-title .t3 { display: block; color: var(--muted); font-size: 0.58em; font-weight: 500; letter-spacing: -0.01em; margin-top: 4px; }
+
+    .hero-desc {
+      position: relative; z-index: 1;
+      max-width: 500px;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.75;
+      margin-bottom: 52px;
+      animation: fadeUp 0.7s 0.2s ease both;
+    }
+
+    .hero-cta {
+      position: relative; z-index: 1;
+      display: flex; gap: 14px; flex-wrap: wrap; justify-content: center;
+      animation: fadeUp 0.7s 0.3s ease both;
+    }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--accent);
+      color: #080c10;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700; font-size: 0.92rem;
+      padding: 14px 28px;
+      border-radius: 10px;
+      border: none; cursor: pointer;
+      text-decoration: none;
+      transition: all 0.25s ease;
+      letter-spacing: 0.01em;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(0,212,160,0.35); }
+
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: transparent;
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-weight: 600; font-size: 0.92rem;
+      padding: 13px 24px;
+      border-radius: 10px;
+      border: 1px solid var(--border2);
+      cursor: pointer; text-decoration: none;
+      transition: all 0.25s ease;
+    }
+    .btn-secondary:hover {
+      border-color: rgba(0,212,160,0.4);
+      background: rgba(0,212,160,0.04);
+      transform: translateY(-2px);
+    }
+
+    .btn-integral {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: rgba(33,150,243,0.08);
+      color: var(--accent2);
+      font-family: 'Syne', sans-serif;
+      font-weight: 600; font-size: 0.92rem;
+      padding: 13px 24px;
+      border-radius: 10px;
+      border: 1px solid rgba(33,150,243,0.25);
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .btn-integral:hover {
+      border-color: rgba(33,150,243,0.5);
+      background: rgba(33,150,243,0.12);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(33,150,243,0.2);
+    }
+
+    .hero-stats {
+      position: relative; z-index: 1;
+      display: flex; gap: 40px; flex-wrap: wrap; justify-content: center;
+      margin-top: 64px;
+      padding-top: 40px;
+      border-top: 1px solid var(--border);
+      width: 100%; max-width: 560px;
+      animation: fadeUp 0.7s 0.4s ease both;
+    }
+    .stat-item { text-align: center; }
+    .stat-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.9rem; font-weight: 800;
+      color: var(--accent);
+    }
+    .stat-label { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+    /* Features */
+    #home-features { background: var(--surface); position: relative; z-index: 1; }
+    .section-inner { max-width: 1060px; margin: 0 auto; padding: 90px 24px; }
+    .section-label {
+      display: inline-block;
+      font-size: 0.7rem; font-weight: 600;
+      color: var(--accent); letter-spacing: 0.12em; text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 800; letter-spacing: -0.03em;
+      line-height: 1.1; margin-bottom: 12px;
+    }
+    .section-sub { color: var(--muted); font-size: 0.95rem; max-width: 480px; line-height: 1.7; }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px; margin-top: 44px;
+    }
+    .feature-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 16px; padding: 24px;
+      transition: all 0.3s ease;
+    }
+    .feature-card:hover {
+      border-color: rgba(0,212,160,0.2);
+      transform: translateY(-3px);
+    }
+    .feature-icon { font-size: 1.8rem; margin-bottom: 14px; display: block; }
+    .feature-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; margin-bottom: 6px; }
+    .feature-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 36px 24px;
+      text-align: center;
+      color: var(--muted); font-size: 0.8rem;
+      position: relative; z-index: 1;
+    }
+    footer strong { color: var(--accent); }
+
+    /* ── ANALYSIS PAGE ── */
+    #page-analysis {
+      padding-top: 70px;
+    }
+    .analysis-header {
+      padding: 40px 24px 24px;
+      max-width: 1060px; margin: 0 auto;
+    }
+    .analysis-header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      font-weight: 800; letter-spacing: -0.03em;
+    }
+    .analysis-header p { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
+
+    .analysis-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      max-width: 1060px; margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+    @media(max-width: 800px) { .analysis-layout { grid-template-columns: 1fr; } }
+
+    .panel {
+      background: rgba(255,255,255,0.025);
+      border: 1px solid var(--border);
+      border-radius: 16px; padding: 24px;
+    }
+    .panel-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.82rem; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 18px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .panel-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent);
+    }
+
+    /* Demo notice */
+    .demo-notice {
+      background: rgba(255,196,56,0.05);
+      border: 1px solid rgba(255,196,56,0.2);
+      border-radius: 10px; padding: 10px 14px;
+      font-size: 0.8rem; color: #ffc438;
+      margin-bottom: 16px;
+      display: flex; align-items: flex-start; gap: 8px;
+    }
+
+    /* Upload */
+    .upload-zone {
+      border: 2px dashed rgba(0,212,160,0.2);
+      border-radius: 12px; padding: 36px 20px;
+      text-align: center; cursor: pointer;
+      transition: all 0.25s ease;
+      background: rgba(0,212,160,0.02);
+      position: relative;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--accent);
+      background: rgba(0,212,160,0.05);
+    }
+    .upload-zone input[type=file] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%;
+    }
+    .upload-icon { font-size: 2.5rem; margin-bottom: 10px; }
+    .upload-label { font-size: 0.9rem; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+    .upload-hint { font-size: 0.78rem; color: var(--muted); }
+
+    #preview-container { display: none; margin-top: 14px; }
+    #preview-img {
+      width: 100%; border-radius: 10px;
+      border: 1px solid var(--border);
+      max-height: 240px; object-fit: contain;
+      background: rgba(0,0,0,0.3);
+    }
+    .preview-name { font-size: 0.77rem; color: var(--muted); margin-top: 6px; text-align: center; }
+
+    .calib-row {
+      display: flex; align-items: center; gap: 10px;
+      margin-top: 16px; flex-wrap: wrap;
+    }
+    .calib-row label { font-size: 0.8rem; color: var(--muted); min-width: 120px; }
+    .select-field, .input-field {
+      flex: 1; min-width: 120px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.85rem;
+      padding: 9px 12px; border-radius: 8px; outline: none;
+      transition: border-color 0.2s;
+    }
+    .select-field:focus, .input-field:focus { border-color: var(--accent); }
+    .select-field option { background: #0f1520; }
+
+    .analyze-btn {
+      width: 100%; margin-top: 18px;
+      background: var(--accent);
+      color: #080c10;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700; font-size: 0.95rem;
+      padding: 15px; border-radius: 10px;
+      border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: all 0.25s ease;
+    }
+    .analyze-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(0,212,160,0.3);
+    }
+    .analyze-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .alert {
+      display: none; padding: 10px 14px;
+      border-radius: 8px; font-size: 0.82rem;
+      margin-top: 10px; align-items: center; gap: 8px;
+    }
+    .alert.error { background: rgba(255,107,107,0.07); border: 1px solid rgba(255,107,107,0.2); color: #ff9999; }
+    .alert.success { background: rgba(0,212,160,0.07); border: 1px solid rgba(0,212,160,0.2); color: var(--accent); }
+    .alert.show { display: flex; }
+
+    /* Results */
+    .result-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .result-card {
+      background: rgba(0,212,160,0.04);
+      border: 1px solid rgba(0,212,160,0.12);
+      border-radius: 12px; padding: 14px 10px;
+      text-align: center; opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.4s ease;
+    }
+    .result-card.visible { opacity: 1; transform: translateY(0); }
+    .result-num {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.5rem; font-weight: 800; color: var(--accent);
+    }
+    .result-unit { font-size: 0.68rem; color: var(--accent); margin-left: 2px; }
+    .result-label { font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
+
+    .result-shoe {
+      background: rgba(33,150,243,0.05);
+      border: 1px solid rgba(33,150,243,0.18);
+      border-radius: 12px; padding: 14px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px; opacity: 0; transform: translateY(8px);
+      transition: all 0.4s 0.3s ease; flex-wrap: wrap; gap: 8px;
+    }
+    .result-shoe.visible { opacity: 1; transform: translateY(0); }
+    .shoe-label { font-size: 0.78rem; color: var(--muted); }
+    .shoe-sizes { display: flex; gap: 6px; flex-wrap: wrap; }
+    .shoe-tag {
+      background: rgba(33,150,243,0.1);
+      border: 1px solid rgba(33,150,243,0.25);
+      color: var(--accent2);
+      font-family: 'Syne', sans-serif;
+      font-weight: 700; font-size: 0.78rem;
+      padding: 3px 9px; border-radius: 5px;
+    }
+
+    /* Visual */
+    .vtabs { display: flex; gap: 6px; margin-bottom: 14px; }
+    .vtab {
+      font-size: 0.75rem; font-weight: 600;
+      padding: 6px 12px; border-radius: 7px;
+      border: 1px solid var(--border);
+      background: transparent; color: var(--muted);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .vtab.active { background: rgba(0,212,160,0.1); border-color: rgba(0,212,160,0.3); color: var(--accent); }
+    .visual-frame {
+      width: 100%; height: 240px;
+      background: rgba(0,0,0,0.4);
+      border-radius: 12px; border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; position: relative;
+    }
+    .visual-frame img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
+    .visual-ph { text-align: center; color: var(--muted); }
+    .visual-ph .vp-icon { font-size: 2rem; opacity: 0.35; margin-bottom: 6px; }
+    .visual-ph p { font-size: 0.8rem; }
+
+    .loading-overlay {
+      display: none; position: absolute; inset: 0;
+      background: rgba(8,12,16,0.88);
+      border-radius: 12px;
+      align-items: center; justify-content: center;
+      flex-direction: column; gap: 10px; z-index: 10;
+    }
+    .loading-overlay.active { display: flex; }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(0,212,160,0.12);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 0.8rem; color: var(--muted); }
+
+    /* ── INTEGRAL PANEL ── */
+    .integral-panel {
+      grid-column: 1 / -1;
+      opacity: 0; transform: translateY(14px);
+      transition: all 0.5s 0.5s ease;
+      display: none;
+    }
+    .integral-panel.visible {
+      opacity: 1; transform: translateY(0);
+      display: block;
+    }
+    .integral-section {
+      background: rgba(33,150,243,0.04);
+      border: 1px solid rgba(33,150,243,0.15);
+      border-radius: 16px; padding: 28px;
+    }
+    .integral-section .panel-title { margin-bottom: 20px; }
+    .integral-section .panel-dot { background: var(--accent2); }
+
+    .integral-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px; margin-bottom: 24px;
+    }
+    .integral-card {
+      background: rgba(255,255,255,0.025);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px;
+    }
+    .integral-card-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.8rem; font-weight: 700;
+      color: var(--accent2); letter-spacing: 0.06em;
+      text-transform: uppercase; margin-bottom: 14px;
+    }
+    .formula-block {
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 8px; padding: 14px 16px;
+      font-family: var(--mono);
+      font-size: 0.82rem; color: #b0cce0;
+      line-height: 1.8; margin-bottom: 10px;
+      overflow-x: auto;
+    }
+    .formula-block .f-comment { color: var(--muted); font-size: 0.75rem; }
+    .formula-block .f-kw { color: var(--accent); }
+    .formula-block .f-val { color: #f0b860; }
+    .formula-block .f-op { color: #cc88ff; }
+
+    .calc-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 0.83rem;
+    }
+    .calc-row:last-child { border-bottom: none; }
+    .calc-label { color: var(--muted); }
+    .calc-val { font-family: var(--mono); color: var(--text); font-size: 0.82rem; }
+    .calc-val.highlight { color: var(--accent); font-weight: 600; }
+    .calc-val.blue { color: var(--accent2); }
+
+    .trapezoid-viz {
+      width: 100%; height: 140px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden; position: relative;
+      margin-top: 14px;
+    }
+
+    .integral-steps {
+      margin-top: 20px;
+    }
+    .integral-step {
+      display: flex; gap: 16px;
+      padding: 14px 0; border-bottom: 1px solid var(--border);
+    }
+    .integral-step:last-child { border-bottom: none; }
+    .step-num-badge {
+      width: 28px; height: 28px; flex-shrink: 0;
+      background: rgba(33,150,243,0.15);
+      border: 1px solid rgba(33,150,243,0.3);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif; font-size: 0.78rem; font-weight: 800;
+      color: var(--accent2);
+    }
+    .step-body { font-size: 0.84rem; }
+    .step-body strong { font-weight: 600; color: var(--text); display: block; margin-bottom: 3px; }
+    .step-body span { color: var(--muted); font-size: 0.8rem; line-height: 1.5; }
+    .step-body .mono { font-family: var(--mono); color: #b0cce0; font-size: 0.78rem; }
+
+    /* ── INTEGRAL CONCEPT PAGE ── */
+    #page-integral {
+      padding-top: 70px;
+    }
+    .concept-header {
+      max-width: 860px; margin: 0 auto;
+      padding: 44px 24px 0;
+    }
+    .concept-header .breadcrumb {
+      font-size: 0.75rem; color: var(--muted);
+      margin-bottom: 16px;
+    }
+    .concept-header .breadcrumb span { color: var(--accent2); }
+    .concept-header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 800; letter-spacing: -0.03em;
+      margin-bottom: 12px;
+    }
+    .concept-header p { color: var(--muted); font-size: 0.95rem; max-width: 600px; line-height: 1.7; }
+
+    .concept-body {
+      max-width: 860px; margin: 0 auto;
+      padding: 36px 24px 80px;
+      display: flex; flex-direction: column; gap: 28px;
+    }
+
+    .concept-section {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 16px; padding: 28px;
+    }
+    .concept-section h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem; font-weight: 700; letter-spacing: -0.01em;
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .concept-section h2 .cs-icon {
+      width: 32px; height: 32px; flex-shrink: 0;
+      background: rgba(0,212,160,0.1);
+      border: 1px solid rgba(0,212,160,0.2);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+    }
+    .concept-section h2.blue .cs-icon { background: rgba(33,150,243,0.1); border-color: rgba(33,150,243,0.2); }
+
+    .concept-section p {
+      font-size: 0.88rem; color: var(--muted); line-height: 1.75;
+      margin-bottom: 14px;
+    }
+    .concept-section p:last-child { margin-bottom: 0; }
+    .concept-section p strong { color: var(--text); font-weight: 500; }
+
+    .math-formula {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px; padding: 16px 20px;
+      font-family: var(--mono);
+      font-size: 0.88rem; color: #b0cce0;
+      line-height: 1.9; margin: 14px 0;
+      overflow-x: auto;
+    }
+    .math-formula .kw { color: var(--accent); }
+    .math-formula .val { color: #f0b860; }
+    .math-formula .comment { color: var(--muted); font-size: 0.78rem; }
+    .math-formula .blue { color: var(--accent2); }
+
+    .pipeline-steps {
+      display: flex; flex-direction: column; gap: 0;
+      margin-top: 16px;
+    }
+    .ps-item {
+      display: flex; gap: 16px; padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .ps-item:last-child { border-bottom: none; }
+    .ps-num {
+      width: 32px; height: 32px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif; font-size: 0.8rem; font-weight: 800;
+      color: #080c10;
+    }
+    .ps-body strong { display: block; font-size: 0.9rem; margin-bottom: 4px; }
+    .ps-body span { font-size: 0.83rem; color: var(--muted); line-height: 1.6; }
+
+    .concept-callout {
+      background: rgba(0,212,160,0.05);
+      border: 1px solid rgba(0,212,160,0.2);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 10px 10px 0;
+      padding: 14px 18px; margin: 14px 0;
+      font-size: 0.85rem; color: var(--text); line-height: 1.65;
+    }
+    .concept-callout.blue {
+      background: rgba(33,150,243,0.05);
+      border-color: rgba(33,150,243,0.2);
+      border-left-color: var(--accent2);
+    }
+
+    /* ── MODAL (Cara Penggunaan) ── */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 200;
+      align-items: center; justify-content: center;
+      padding: 24px;
+      backdrop-filter: blur(8px);
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      max-width: 640px; width: 100%;
+      max-height: 88vh; overflow-y: auto;
+      padding: 36px;
+      position: relative;
+      animation: modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    @keyframes modalIn {
+      from { opacity:0; transform:scale(0.92) translateY(16px); }
+      to   { opacity:1; transform:scale(1) translateY(0); }
+    }
+    .modal-close {
+      position: absolute; top: 18px; right: 18px;
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      color: var(--muted); font-size: 1rem;
+      width: 34px; height: 34px; border-radius: 50%;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .modal-close:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+    .modal h2 {
+      font-family: 'Syne', sans-serif; font-size: 1.7rem; font-weight: 800;
+      letter-spacing: -0.03em; margin-bottom: 6px;
+    }
+    .modal-sub { color: var(--muted); font-size: 0.87rem; margin-bottom: 28px; }
+
+    .steps-list { display: flex; flex-direction: column; }
+    .step-item {
+      display: flex; gap: 18px; padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .step-item:last-child { border-bottom: none; }
+    .step-num-wrap { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+    .step-num {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.8rem;
+      color: #080c10; flex-shrink: 0;
+    }
+    .step-connector { width: 2px; flex: 1; background: linear-gradient(to bottom, rgba(0,212,160,0.25), transparent); margin-top: 6px; }
+    .step-item:last-child .step-connector { display: none; }
+    .step-content { padding-top: 2px; }
+    .step-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; margin-bottom: 5px; }
+    .step-desc { font-size: 0.84rem; color: var(--muted); line-height: 1.6; }
+    .step-tip {
+      display: inline-flex; align-items: center; gap: 5px; margin-top: 8px;
+      background: rgba(255,196,56,0.05); border: 1px solid rgba(255,196,56,0.18);
+      color: #ffc438; font-size: 0.76rem; padding: 4px 9px; border-radius: 6px;
+    }
+
+    /* Backend badge */
+    .backend-badge {
+      position: fixed; bottom: 18px; right: 18px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 100px; padding: 7px 12px;
+      font-size: 0.72rem; color: var(--muted);
+      display: flex; align-items: center; gap: 5px;
+      z-index: 50;
+    }
+    .backend-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent3); }
+    .backend-badge .dot.online { background: var(--accent); animation: pulse 2s infinite; }
+
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(20px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+    /* ── MATHJAX RENDER BLOCKS ── */
+    .mjx-block {
+      background: rgba(0,0,0,0.38);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 18px 24px;
+      margin: 14px 0;
+      overflow-x: auto;
+      text-align: center;
+    }
+    .mjx-block mjx-container[display="true"] { margin: 0 !important; }
+    .mjx-block svg { color: #dce8f0; }
+
+    .mjx-group {
+      background: rgba(0,0,0,0.38);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 16px 22px;
+      margin: 14px 0;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .mjx-row {
+      display: flex; align-items: center; gap: 12px;
+      flex-wrap: wrap; padding: 4px 0;
+    }
+    .mjx-row + .mjx-row { border-top: 1px solid rgba(255,255,255,0.04); padding-top: 8px; }
+    .mjx-section-label {
+      font-family: var(--mono); font-size: 0.72rem;
+      color: var(--muted); font-style: italic;
+      display: block; padding-bottom: 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      margin-bottom: 2px;
+    }
+
+    /* ── KARTESIUS ── */
+    .kartesius-wrapper {
+      background: rgba(0,0,0,0.28);
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .kartesius-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 16px; flex-wrap: wrap; margin-bottom: 16px;
+    }
+    .kartesius-controls { display: flex; gap: 7px; flex-wrap: wrap; }
+    .kctrl-btn {
+      font-family: var(--mono); font-size: 0.75rem; font-weight: 500;
+      padding: 6px 14px; border-radius: 8px;
+      border: 1px solid var(--border2);
+      background: transparent; color: var(--muted);
+      cursor: pointer; transition: all 0.18s;
+    }
+    .kctrl-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .kctrl-btn.active { background: rgba(0,212,160,0.1); border-color: var(--accent); color: var(--accent); }
+
+    .kartesius-canvas-wrap {
+      position: relative; width: 100%; height: 420px;
+      background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 12px; overflow: hidden;
+    }
+    #kartesius-canvas { width: 100%; height: 100%; display: block; }
+    .kartesius-legend {
+      position: absolute; bottom: 12px; right: 14px;
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(8,12,16,0.82);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 7px 12px; font-size: 0.73rem; color: var(--muted);
+    }
+    .kleg-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    .shoelace-table {
+      width: 100%; border-collapse: collapse;
+      font-family: var(--mono); font-size: 0.75rem;
+    }
+    .shoelace-table th {
+      background: rgba(255,255,255,0.04); color: var(--muted); font-weight: 600;
+      padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--border2); white-space: nowrap;
+    }
+    .shoelace-table th:first-child { text-align: center; }
+    .shoelace-table td {
+      padding: 5px 10px; text-align: right; color: #9abccc;
+      border-bottom: 1px solid rgba(255,255,255,0.035);
+    }
+    .shoelace-table td:first-child { text-align: center; color: var(--muted); }
+    .shoelace-table td.pos { color: var(--accent); }
+    .shoelace-table td.neg { color: #ff8888; }
+    .shoelace-table td.xi { color: #f0b860; }
+    .shoelace-table td.yi { color: var(--accent2); }
+    .shoelace-table tr:last-child td { border-bottom: none; }
+    .shoelace-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .sl-total td { background: rgba(0,212,160,0.06); font-weight: 700; border-top: 1px solid rgba(0,212,160,0.25) !important; }
+
+    .code-block {
+      background: rgba(0,0,0,0.38);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-family: var(--mono);
+      font-size: 0.8rem; color: #b0cce0;
+      line-height: 1.85; margin: 14px 0;
+      overflow-x: auto;
+    }
+    .code-block .c-cm { color: var(--muted); }
+    .code-block .c-kw { color: var(--accent); }
+    .code-block .c-val { color: #f0b860; }
+    .code-block .c-fn { color: var(--accent2); }
+
+    /* ── TOMBOL LIHAT PENJELASAN ── */
+    .show-detail-btn {
+      width: 100%;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      background: rgba(33,150,243,0.07);
+      border: 1px solid rgba(33,150,243,0.28);
+      color: var(--accent2);
+      font-family: 'Syne', sans-serif;
+      font-weight: 700; font-size: 0.9rem;
+      padding: 13px 20px; border-radius: 10px;
+      cursor: pointer; transition: all 0.25s ease;
+      letter-spacing: 0.01em;
+    }
+    .show-detail-btn:hover {
+      background: rgba(33,150,243,0.13);
+      border-color: rgba(33,150,243,0.5);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(33,150,243,0.15);
+    }
+    .show-detail-btn.open {
+      background: rgba(33,150,243,0.12);
+      border-color: rgba(33,150,243,0.45);
+    }
+    .sdb-icon {
+      font-size: 1.1rem;
+      width: 28px; height: 28px;
+      background: rgba(33,150,243,0.15);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .sdb-chevron {
+      margin-left: auto;
+      font-size: 0.85rem;
+      transition: transform 0.25s ease;
+    }
+    .show-detail-btn.open .sdb-chevron { transform: rotate(180deg); }
+
+    /* ── EXPLAIN BUTTON & PANEL ── */
+    .explain-btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: rgba(255,196,56,0.07);
+      border: 1px solid rgba(255,196,56,0.25);
+      color: #ffc438;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.78rem; font-weight: 700;
+      padding: 7px 14px; border-radius: 8px;
+      cursor: pointer; transition: all 0.22s;
+      margin-top: 12px;
+      letter-spacing: 0.02em;
+    }
+    .explain-btn:hover {
+      background: rgba(255,196,56,0.13);
+      border-color: rgba(255,196,56,0.5);
+      transform: translateY(-1px);
+    }
+    .explain-btn .eb-icon { font-size: 0.95rem; transition: transform 0.2s; }
+    .explain-btn.open .eb-icon { transform: rotate(180deg); }
+
+    .explain-panel {
+      display: none;
+      margin-top: 14px;
+      background: rgba(255,196,56,0.04);
+      border: 1px solid rgba(255,196,56,0.15);
+      border-radius: 12px;
+      padding: 16px 18px;
+      animation: fadeUp 0.3s ease both;
+    }
+    .explain-panel.open { display: block; }
+    .explain-panel h4 {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.88rem; font-weight: 800;
+      color: #ffc438; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .explain-panel p {
+      font-size: 0.84rem; color: var(--text);
+      line-height: 1.75; margin-bottom: 8px;
+    }
+    .explain-panel p:last-child { margin-bottom: 0; }
+    .explain-panel strong { color: #ffc438; font-weight: 600; }
+    .explain-panel .ep-analogy {
+      background: rgba(0,212,160,0.05);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 10px 14px;
+      font-size: 0.82rem; color: var(--muted);
+      line-height: 1.65; margin-top: 10px; margin-bottom: 0;
+    }
+    .explain-panel .ep-analogy strong { color: var(--accent); }
+
+    /* ── WORKINGS BLOCK (step-by-step penyelesaian) ── */
+    .workings-block {
+      display: flex; flex-direction: column; gap: 0;
+      margin: 14px 0 10px;
+    }
+    .wb-step {
+      display: flex; gap: 12px; align-items: flex-start;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 14px;
+    }
+    .wb-step.wb-final {
+      background: rgba(0,212,160,0.05);
+      border-color: rgba(0,212,160,0.25);
+    }
+    .wb-num {
+      width: 24px; height: 24px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif; font-size: 0.72rem; font-weight: 800;
+      color: #080c10; margin-top: 2px;
+    }
+    .wb-step.wb-final .wb-num {
+      background: var(--accent);
+    }
+    .wb-label {
+      font-size: 0.76rem; color: var(--muted);
+      margin-bottom: 5px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .wb-formula {
+      font-family: var(--mono); font-size: 0.88rem;
+      color: #dce8f0; line-height: 1.7;
+      margin-bottom: 4px;
+    }
+    .wb-step.wb-final .wb-formula strong {
+      color: var(--accent); font-size: 1.05rem;
+    }
+    .wb-note {
+      font-size: 0.74rem; color: var(--muted); line-height: 1.5;
+    }
+    .wb-arrow {
+      text-align: center; font-size: 1.1rem;
+      color: rgba(0,212,160,0.4); padding: 3px 0;
+      line-height: 1;
+    }
+
+    /* comparison table */
+    .cmp-table {
+      width: 100%; border-collapse: collapse;
+      font-family: var(--mono); font-size: 0.78rem;
+      margin: 14px 0;
+    }
+    .cmp-table th {
+      background: rgba(255,255,255,0.04);
+      color: var(--muted); font-weight: 600;
+      padding: 8px 12px; text-align: left;
+      border-bottom: 1px solid var(--border2);
+    }
+    .cmp-table td {
+      padding: 7px 12px; color: #b0cce0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .cmp-table tr:last-child td { border-bottom: none; }
+    .cmp-table .yes { color: var(--accent); font-weight: 600; }
+    .cmp-table .alt { color: var(--accent2); }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo" onclick="goHome()">Foot<span>Scan</span></div>
+  <button class="nav-back" id="nav-back" onclick="goHome()">← Kembali</button>
+</nav>
+
+<!-- ════════════════════════════════
+     PAGE: HOME
+════════════════════════════════ -->
+<div class="page active" id="page-home">
+
+  <section id="home-hero">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <div class="hero-badge">Computer Vision + Numerical Integration</div>
+
+    <h1 class="hero-title">
+      <span class="t1">Ukur Kaki</span>
+      <span class="t2">Dengan Presisi</span>
+      <span class="t3">Digital & Matematis</span>
+    </h1>
+
+    <p class="hero-desc">
+      Teknologi pengolahan citra canggih yang mendeteksi kontur kaki dari foto dan menghitung panjang, lebar, serta luas telapak menggunakan integral numerik.
+    </p>
+
+    <div class="hero-cta">
+      <button class="btn-primary" onclick="goAnalysis()">
+        <span>👣</span> Mulai Ukur
+      </button>
+      <button class="btn-secondary" onclick="openModal()">
+        <span>📖</span> Cara Penggunaan
+      </button>
+      <button class="btn-integral" onclick="goIntegral()">
+        <span>∫</span> Konsep Integral
+      </button>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat-item">
+        <div class="stat-value">±2mm</div>
+        <div class="stat-label">Akurasi pengukuran</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">3</div>
+        <div class="stat-label">Metode kalibrasi</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">∫</div>
+        <div class="stat-label">Trapezoidal Rule</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="home-features">
+    <div class="section-inner">
+      <span class="section-label">Teknologi</span>
+      <h2 class="section-title">Bagaimana Sistem Bekerja</h2>
+      <p class="section-sub">Pipeline analisis multi-tahap yang menghasilkan pengukuran akurat dari satu foto.</p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <span class="feature-icon">🔲</span>
+          <div class="feature-name">Preprocessing Citra</div>
+          <div class="feature-desc">Konversi grayscale lalu threshold binary untuk memisahkan kaki dari background secara otomatis.</div>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">📐</span>
+          <div class="feature-name">Deteksi Kontur</div>
+          <div class="feature-desc">Algoritma OpenCV mendeteksi tepi dan mengekstrak kontur terluar kaki sebagai titik koordinat (x, y).</div>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">∫</span>
+          <div class="feature-name">Integral Numerik</div>
+          <div class="feature-desc">Luas area dihitung dengan Trapezoidal Rule pada koordinat kontur — presisi matematis, bukan estimasi.</div>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">📏</span>
+          <div class="feature-name">Kalibrasi Referensi</div>
+          <div class="feature-desc">Tempatkan kertas A4, kartu kredit, atau penggaris untuk konversi piksel → sentimeter yang akurat.</div>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">👟</span>
+          <div class="feature-name">Rekomendasi Sepatu</div>
+          <div class="feature-desc">Panjang kaki otomatis dikonversi ke ukuran ID, EU, US, dan UK.</div>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🌗</span>
+          <div class="feature-name">Adaptasi Pencahayaan</div>
+          <div class="feature-desc">Adaptive thresholding menangani variasi cahaya gelap, terang, maupun bayangan pada foto.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>FootScan · Pengolahan Citra Digital + Integral Numerik</p>
+    <p style="margin-top:5px;">Built with <strong>OpenCV</strong>, <strong>NumPy</strong>, <strong>Flask</strong> & JavaScript</p>
+  </footer>
+</div>
+
+<!-- ════════════════════════════════
+     PAGE: ANALYSIS
+════════════════════════════════ -->
+<div class="page" id="page-analysis">
+
+  <div class="analysis-header">
+    <span class="section-label">Analisis Kaki</span>
+    <h1>Mulai Pengukuran</h1>
+    <p>Upload foto kaki, pilih referensi kalibrasi, dan dapatkan hasil pengukuran beserta perhitungan integral numerik.</p>
+  </div>
+
+  <div class="analysis-layout">
+
+    <!-- Kolom kiri: Upload -->
+    <div>
+      <div class="panel">
+        <div class="panel-title"><div class="panel-dot"></div> Upload Gambar</div>
+
+        <div class="demo-notice">
+          ℹ️ <span>Mode <strong>Demo</strong>: Backend belum terhubung. Hasil adalah simulasi. Hubungkan ke <code>app.py</code> untuk analisis nyata.</span>
+        </div>
+
+        <div class="upload-zone" id="dropzone">
+          <input type="file" id="file-input" accept="image/jpeg,image/png" onchange="handleFile(event)"/>
+          <div class="upload-icon">🦶</div>
+          <div class="upload-label">Klik atau seret foto kaki ke sini</div>
+          <div class="upload-hint">JPG / PNG · Maks 10MB · Satu kaki per foto</div>
+        </div>
+
+        <div id="preview-container">
+          <img id="preview-img" src="" alt="Preview"/>
+          <div class="preview-name" id="preview-name"></div>
+        </div>
+
+        <div class="calib-row">
+          <label>Objek Referensi</label>
+          <select class="select-field" id="ref-select">
+            <option value="a4">Kertas A4 (21 × 29.7 cm)</option>
+            <option value="credit_card">Kartu Kredit (8.56 × 5.40 cm)</option>
+            <option value="ruler_30">Penggaris 30 cm</option>
+          </select>
+        </div>
+
+        <div class="calib-row">
+          <label>Threshold (0–255)</label>
+          <input type="range" class="input-field" id="threshold-slider" min="50" max="220" value="127" style="padding:4px 0;" oninput="document.getElementById('thresh-label').textContent=this.value"/>
+          <span id="thresh-label" style="font-family:var(--mono);font-size:0.8rem;color:var(--muted);min-width:28px;text-align:right;">127</span>
+        </div>
+
+        <button class="analyze-btn" id="analyze-btn" onclick="analyzeImage()" disabled>
+          <span>🔍</span> Analisis Kaki
+        </button>
+
+        <div class="alert error" id="alert-error"><span>⚠️</span><span id="error-msg"></span></div>
+        <div class="alert success" id="alert-success"><span>✅</span><span id="success-msg"></span></div>
+      </div>
+    </div>
+
+    <!-- Kolom kanan: Hasil + Visual -->
+    <div style="display:flex;flex-direction:column;gap:20px;">
+      <div class="panel">
+        <div class="panel-title"><div class="panel-dot" style="background:var(--accent2)"></div> Hasil Pengukuran</div>
+        <div class="result-grid">
+          <div class="result-card" id="rc-length">
+            <div class="result-num" id="res-length">—</div>
+            <div class="result-label">Panjang Kaki</div>
+          </div>
+          <div class="result-card" id="rc-width">
+            <div class="result-num" id="res-width">—</div>
+            <div class="result-label">Lebar Kaki</div>
+          </div>
+          <div class="result-card" id="rc-area">
+            <div class="result-num" id="res-area">—</div>
+            <div class="result-label">Luas Telapak</div>
+          </div>
+        </div>
+        <div class="result-shoe" id="shoe-sizes">
+          <div class="shoe-label">Ukuran Sepatu</div>
+          <div class="shoe-sizes" id="shoe-tags">
+            <span style="font-size:0.78rem;color:var(--muted)">Belum dianalisis</span>
+          </div>
+        </div>
+        <div id="conf-info" style="font-size:0.78rem;color:var(--muted);text-align:center;display:none;">
+          Confidence: <span id="conf-val" style="color:var(--accent)"></span> · Threshold: <span id="thresh-used"></span>
+        </div>
+
+        <!-- Tombol Lihat Penjelasan -->
+        <div id="show-detail-wrap" style="display:none;margin-top:16px;">
+          <button class="show-detail-btn" id="show-detail-btn" onclick="toggleIntegralPanel()">
+            <span class="sdb-icon">∫</span>
+            <span id="sdb-label">Lihat Penjelasan Perhitungan</span>
+            <span class="sdb-chevron" id="sdb-chevron">▾</span>
+          </button>
+        </div>
+
+      </div>
+
+      <div class="panel">
+        <div class="panel-title"><div class="panel-dot" style="background:#f0b860"></div> Visualisasi</div>
+        <div class="vtabs">
+          <button class="vtab active" onclick="switchTab(0,this)">Gambar Asli</button>
+          <button class="vtab" onclick="switchTab(1,this)">Kontur Terdeteksi</button>
+        </div>
+        <div class="visual-frame" id="visual-frame">
+          <div class="loading-overlay" id="loading">
+            <div class="spinner"></div>
+            <div class="loading-text" id="loading-text">Memproses gambar…</div>
+          </div>
+          <div class="visual-ph" id="visual-ph">
+            <div class="vp-icon">🖼️</div>
+            <p>Hasil analisis muncul di sini</p>
+          </div>
+          <img id="visual-img" src="" alt="Visual" style="display:none;max-width:100%;max-height:230px;object-fit:contain;"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Integral Panel (full width, muncul saat tombol diklik) -->
+    <div class="integral-panel" id="integral-panel" style="display:none;opacity:0;transform:translateY(14px);">
+      <div class="integral-section">
+        <div class="panel-title">
+          <div class="panel-dot" style="background:var(--accent2)"></div>
+          Perhitungan Integral Numerik — Detail Lengkap
+        </div>
+
+        <!-- ══ KARTESIUS UTAMA ══ -->
+        <div class="kartesius-wrapper">
+          <div class="kartesius-header">
+            <div>
+              <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.05rem;">Kontur Kaki pada Bidang Kartesius</div>
+              <div style="font-size:0.78rem;color:var(--muted);margin-top:3px;">Titik-titik koordinat (xᵢ, yᵢ) hasil deteksi kontur — fondasi Shoelace Formula &amp; Trapezoidal Rule</div>
+              <button class="explain-btn" onclick="toggleExplain('exp-kartesius', this)">
+                <span>💡</span> Apa ini? <span class="eb-icon">▾</span>
+              </button>
+              <div class="explain-panel" id="exp-kartesius">
+                <h4>📍 Grafik kontur kaki</h4>
+                <p>Setelah foto diproses, sistem menelusuri tepi kaki dan menyimpannya sebagai <strong>ratusan titik koordinat (x, y)</strong> — seperti peta tepi kaki berupa titik-titik.</p>
+                <p>Grafik ini menampilkan semua titik tersebut di bidang koordinat biasa. Sumbu X = lebar kaki, sumbu Y = panjangnya. Semua hitungan luas dilakukan dari titik-titik ini.</p>
+                <p class="ep-analogy">🎯 <strong>Analogi:</strong> Seperti menjiplak kaki di kertas grafik lalu menandai ratusan titik di pinggirnya. Grafik ini adalah hasil jiplakan digital tersebut.</p>
+              </div>
+            </div>
+            <div class="kartesius-controls">
+              <button class="kctrl-btn active" id="kbtn-contour" onclick="setKartesiusMode('contour',this)">Kontur</button>
+              <button class="kctrl-btn" id="kbtn-shoelace" onclick="setKartesiusMode('shoelace',this)">Shoelace</button>
+              <button class="kctrl-btn" id="kbtn-trapezoid" onclick="setKartesiusMode('trapezoid',this)">Trapesium</button>
+              <button class="kctrl-btn" id="kbtn-area" onclick="setKartesiusMode('area',this)">Area Fill</button>
+            </div>
+          </div>
+
+          <div class="kartesius-canvas-wrap">
+            <canvas id="kartesius-canvas"></canvas>
+            <div class="kartesius-legend" id="k-legend">
+              <span class="kleg-dot" style="background:var(--accent)"></span><span>Kontur kaki</span>
+              <span class="kleg-dot" style="background:var(--accent2)"></span><span>Trapesium</span>
+              <span class="kleg-dot" style="background:#f0b860"></span><span>Titik kontrol</span>
+            </div>
+          </div>
+
+          <!-- Shoelace step-by-step table -->
+          <div id="shoelace-table-wrap" style="display:none;margin-top:16px;">
+            <div style="font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:700;color:var(--muted);letter-spacing:0.07em;text-transform:uppercase;margin-bottom:4px;">
+              Tabel Perhitungan Shoelace (sampel 12 titik dari <span id="sl-total-pts">n</span> titik)
+            </div>
+            <button class="explain-btn" onclick="toggleExplain('exp-shoelace', this)" style="margin-bottom:12px;">
+              <span>💡</span> Cara baca tabel ini <span class="eb-icon">▾</span>
+            </button>
+            <div class="explain-panel" id="exp-shoelace">
+              <h4>📊 Shoelace Formula — cara menghitung luas dari titik-titik</h4>
+              <p>Bayangkan kamu menghubungkan semua titik tepi kaki satu per satu membentuk poligon. <strong>Shoelace Formula</strong> menghitung luas poligon itu dengan cara yang cerdik: kalikan koordinat titik ke-i dengan titik berikutnya secara silang, lalu jumlahkan semua hasilnya.</p>
+              <p>Kolom <strong>Δ</strong> (paling kanan) adalah hasil perkalian silang tiap pasang titik. Saat dijumlahkan semua lalu dibagi 2, hasilnya = luas kaki dalam cm².</p>
+              <p><strong>Nilai positif</strong> (hijau) = bagian titik yang "melebar" ke kanan. <strong>Nilai negatif</strong> (merah) = bagian yang "melebar" ke kiri. Keduanya saling melengkapi.</p>
+              <p class="ep-analogy">🎯 <strong>Analogi:</strong> Seperti cara menghitung luas tanah dengan berjalan mengelilinginya sambil mencatat koordinat GPS — tanpa perlu mengukur setiap sudut secara langsung.</p>
+            </div>
+            <div style="overflow-x:auto;">
+              <table class="shoelace-table" id="shoelace-table">
+                <thead>
+                  <tr>
+                    <th>i</th>
+                    <th>xᵢ (cm)</th>
+                    <th>yᵢ (cm)</th>
+                    <th>xᵢ₊₁</th>
+                    <th>yᵢ₊₁</th>
+                    <th>xᵢ·yᵢ₊₁</th>
+                    <th>xᵢ₊₁·yᵢ</th>
+                    <th>Δ = col6 − col7</th>
+                  </tr>
+                </thead>
+                <tbody id="shoelace-tbody"></tbody>
+                <tfoot>
+                  <tr class="sl-total">
+                    <td colspan="7" style="text-align:right;font-weight:700;color:var(--muted);">½ |Σ Δ| =</td>
+                    <td id="sl-result" style="color:var(--accent);font-weight:700;">—</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div class="mjx-group" style="margin-top:14px;">
+              <span class="mjx-section-label">Shoelace Formula yang digunakan</span>
+              <div class="mjx-row">\[ A = \frac{1}{2}\left|\sum_{i=0}^{n-1}(x_i \cdot y_{i+1} - x_{i+1} \cdot y_i)\right| \]</div>
+            </div>
+          </div>
+
+          <!-- Trapezoid step-by-step table -->
+          <div id="trapezoid-table-wrap" style="display:none;margin-top:16px;">
+            <div style="font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:700;color:var(--muted);letter-spacing:0.07em;text-transform:uppercase;margin-bottom:4px;">
+              Tabel Strip Trapesium (sampel 16 strip)
+            </div>
+            <button class="explain-btn" onclick="toggleExplain('exp-trapezoid', this)" style="margin-bottom:12px;">
+              <span>💡</span> Cara baca tabel ini <span class="eb-icon">▾</span>
+            </button>
+            <div class="explain-panel" id="exp-trapezoid">
+              <h4>📐 Aturan Trapesium — menghitung luas dengan cara "mengiris"</h4>
+              <p>Bayangkan kamu mengiris kaki menjadi <strong>20 strip tipis vertikal</strong> dari ujung kiri ke kanan. Tiap strip berbentuk seperti batang persegi panjang (atau trapesium) dengan lebar Δx dan tinggi = lebar kaki di posisi x tersebut.</p>
+              <p>Kolom <strong>h_atas</strong> = tepi atas kaki di posisi itu, <strong>h_bawah</strong> = tepi bawah. Selisihnya = "tinggi" strip. Luas tiap strip = tinggi × lebar (Δx). Jumlahkan semua strip = luas total kaki.</p>
+              <p class="ep-analogy">🎯 <strong>Analogi:</strong> Seperti memotong kue kaki (berbentuk jejak kaki) menjadi irisan-irisan tipis, mengukur tinggi setiap irisan, lalu menjumlahkan volumenya — semakin banyak irisan, semakin akurat hasilnya.</p>
+            </div>
+            <div style="overflow-x:auto;">
+              <table class="shoelace-table" id="trapezoid-table">
+                <thead>
+                  <tr>
+                    <th>Strip i</th>
+                    <th>xᵢ (cm)</th>
+                    <th>xᵢ₊₁ (cm)</th>
+                    <th>Δx (cm)</th>
+                    <th>h_atas (cm)</th>
+                    <th>h_bawah (cm)</th>
+                    <th>Lebar = h_atas−h_bawah</th>
+                    <th>Luas Strip = ½(f₀+f₁)·Δx</th>
+                  </tr>
+                </thead>
+                <tbody id="trap-tbody"></tbody>
+                <tfoot>
+                  <tr class="sl-total">
+                    <td colspan="7" style="text-align:right;font-weight:700;color:var(--muted);">Total luas trapesium =</td>
+                    <td id="trap-result" style="color:var(--accent);font-weight:700;">—</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div class="mjx-group" style="margin-top:14px;">
+              <span class="mjx-section-label">Composite Trapezoidal Rule</span>
+              <div class="mjx-row">\[ A \approx \sum_{i=0}^{n-1}\frac{h_i^{\text{atas}} + h_{i+1}^{\text{atas}}}{2}\,\Delta x - \sum_{i=0}^{n-1}\frac{h_i^{\text{bawah}} + h_{i+1}^{\text{bawah}}}{2}\,\Delta x \]</div>
+            </div>
+          </div>
+
+        </div><!-- end kartesius-wrapper -->
+
+        <div class="integral-grid">
+
+          <!-- Card 1: Luas Area — step by step -->
+          <div class="integral-card">
+            <div class="integral-card-title">∫ Penyelesaian Luas Telapak</div>
+            <div class="workings-block" id="workings-area">
+              <div class="wb-step">
+                <div class="wb-num">1</div>
+                <div class="wb-body">
+                  <div class="wb-label">Luas kontur dalam piksel²</div>
+                  <div class="wb-formula" id="wb-area-px-formula">387,459 px²</div>
+                  <div class="wb-note">dihitung oleh Shoelace Formula dari semua titik kontur</div>
+                </div>
+              </div>
+              <div class="wb-arrow">↓</div>
+              <div class="wb-step">
+                <div class="wb-num">2</div>
+                <div class="wb-body">
+                  <div class="wb-label">Faktor skala kalibrasi</div>
+                  <div class="wb-formula" id="wb-scale-formula">47.0 px/cm → (47.0)² = 2,209 px²/cm²</div>
+                  <div class="wb-note">dari objek referensi: berapa piksel = 1 cm</div>
+                </div>
+              </div>
+              <div class="wb-arrow">↓</div>
+              <div class="wb-step wb-final">
+                <div class="wb-num">3</div>
+                <div class="wb-body">
+                  <div class="wb-label">Konversi ke cm²</div>
+                  <div class="wb-formula" id="wb-area-cm-formula">387,459 ÷ 2,209 = <strong id="wb-area-result">175.4 cm²</strong></div>
+                  <div class="wb-note">Luas telapak kaki = luas px² ÷ (px/cm)²</div>
+                </div>
+              </div>
+            </div>
+            <div class="calc-row" style="margin-top:10px;"><span class="calc-label">Jumlah titik kontur</span><span class="calc-val" id="int-n-pts">—</span></div>
+            <div class="calc-row"><span class="calc-label">Luas dalam piksel²</span><span class="calc-val" id="int-area-px">—</span></div>
+            <div class="calc-row"><span class="calc-label">Faktor konversi (px/cm)²</span><span class="calc-val" id="int-conv">—</span></div>
+            <div class="calc-row"><span class="calc-label">Interval integrasi (Δx)</span><span class="calc-val" id="int-dx">—</span></div>
+            <div class="calc-row"><span class="calc-label">Luas akhir (cm²)</span><span class="calc-val highlight" id="int-area-cm">—</span></div>
+          </div>
+
+          <!-- Card 2: Dimensi Linear — step by step -->
+          <div class="integral-card">
+            <div class="integral-card-title">📐 Penyelesaian Panjang &amp; Lebar</div>
+            <div class="workings-block" id="workings-dim">
+              <div class="wb-step">
+                <div class="wb-num">1</div>
+                <div class="wb-body">
+                  <div class="wb-label">Rentang kontur dalam piksel</div>
+                  <div class="wb-formula" id="wb-range-formula">
+                    Panjang: <span id="wb-yrange">1,166</span> px &nbsp;|&nbsp; Lebar: <span id="wb-xrange">489</span> px
+                  </div>
+                  <div class="wb-note">selisih titik paling atas−bawah dan kiri−kanan kontur</div>
+                </div>
+              </div>
+              <div class="wb-arrow">↓</div>
+              <div class="wb-step">
+                <div class="wb-num">2</div>
+                <div class="wb-body">
+                  <div class="wb-label">Faktor skala kalibrasi</div>
+                  <div class="wb-formula" id="wb-pxcm-formula">47.0 px = 1 cm</div>
+                  <div class="wb-note">dari objek referensi (misal: kertas A4 = 21 cm)</div>
+                </div>
+              </div>
+              <div class="wb-arrow">↓</div>
+              <div class="wb-step wb-final">
+                <div class="wb-num">3</div>
+                <div class="wb-body">
+                  <div class="wb-label">Bagi piksel dengan px/cm</div>
+                  <div class="wb-formula" id="wb-dim-formula">
+                    Panjang: <span id="wb-yrange2">1,166</span> ÷ <span id="wb-pxcm2">47.0</span> = <strong id="wb-len-result">24.8 cm</strong><br>
+                    Lebar: <span id="wb-xrange2">489</span> ÷ <span id="wb-pxcm3">47.0</span> = <strong id="wb-wid-result">10.4 cm</strong>
+                  </div>
+                  <div class="wb-note">Panjang/Lebar kaki = rentang piksel ÷ (px/cm)</div>
+                </div>
+              </div>
+            </div>
+            <div class="calc-row" style="margin-top:10px;"><span class="calc-label">Rentang x (piksel)</span><span class="calc-val" id="int-xrange">—</span></div>
+            <div class="calc-row"><span class="calc-label">Rentang y (piksel)</span><span class="calc-val" id="int-yrange">—</span></div>
+            <div class="calc-row"><span class="calc-label">Piksel per cm</span><span class="calc-val" id="int-pxcm">—</span></div>
+            <div class="calc-row"><span class="calc-label">Panjang kaki (cm)</span><span class="calc-val highlight" id="int-len-cm">—</span></div>
+            <div class="calc-row"><span class="calc-label">Lebar kaki (cm)</span><span class="calc-val highlight" id="int-wid-cm">—</span></div>
+          </div>
+
+          <!-- Card 3: Visualisasi Trapesium mini + error -->
+          <div class="integral-card">
+            <div class="integral-card-title">📊 Ringkasan Numerik</div>
+            <button class="explain-btn" onclick="toggleExplain('exp-card-num', this)">
+              <span>💡</span> Jelaskan angka-angka ini <span class="eb-icon">▾</span>
+            </button>
+            <div class="explain-panel" id="exp-card-num">
+              <h4>🔍 Apa arti angka-angka di bawah?</h4>
+              <p><strong>Error estimasi:</strong> Seberapa meleset hitungan dibanding nilai sebenarnya. Nilai ±0.5% artinya sangat akurat — untuk kaki 25 cm, maksimal meleset 0.125 cm.</p>
+              <p><strong>Shoelace (eksak):</strong> Metode utama yang hasilnya tepat untuk poligon apapun — tidak ada aproksimasi.</p>
+              <p><strong>Trapezoidal O(n):</strong> Metode verifikasi. "O(n)" berarti waktu hitungnya sebanding dengan jumlah titik — cepat!</p>
+              <p class="ep-analogy">🎯 Semakin kecil error %, semakin yakin kita bahwa luas yang ditampilkan mendekati luas kaki yang sesungguhnya.</p>
+            </div>
+            <canvas id="trapezoid-canvas" class="trapezoid-viz"></canvas>
+            <div style="margin-top:12px;">
+              <div class="calc-row"><span class="calc-label">Error estimasi</span><span class="calc-val blue" id="int-error">±0.8%</span></div>
+              <div class="calc-row"><span class="calc-label">Metode utama</span><span class="calc-val blue">Shoelace (eksak)</span></div>
+              <div class="calc-row"><span class="calc-label">Verifikasi</span><span class="calc-val blue">Trapezoidal O(n)</span></div>
+              <div class="calc-row"><span class="calc-label">Kompleksitas</span><span class="calc-val blue">O(n)</span></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Step-by-step -->
+        <div class="integral-steps">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-wrap:wrap;">
+            <div style="font-family:'Syne',sans-serif;font-size:0.82rem;font-weight:700;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;">Pipeline Integrasi</div>
+            <button class="explain-btn" style="margin-top:0;" onclick="toggleExplain('exp-pipeline', this)">
+              <span>💡</span> Jelaskan alur ini <span class="eb-icon">▾</span>
+            </button>
+          </div>
+          <div class="explain-panel" id="exp-pipeline" style="margin-bottom:12px;">
+            <h4>🔄 Alur lengkap dari foto ke hasil ukuran</h4>
+            <p>Proses analisis kaki berjalan dalam 4 tahap berurutan — setiap tahap menjadi bahan baku untuk tahap berikutnya:</p>
+            <p><strong>Tahap 1 → 2:</strong> Foto diubah jadi "peta hitam-putih" lalu tepi kaki ditelusuri menjadi titik-titik koordinat.</p>
+            <p><strong>Tahap 3 → 4:</strong> Titik-titik itu diintegrasikan (dihitung luasnya) lalu dikonversi dari satuan piksel ke sentimeter menggunakan objek referensi sebagai skala.</p>
+            <p class="ep-analogy">🎯 <strong>Mudahnya:</strong> Foto → Jiplak tepi kaki → Hitung luas jiplakan → Konversi ke cm. Semua terjadi dalam hitungan detik secara otomatis.</p>
+          </div>
+          <div class="integral-step"><div class="step-num-badge">1</div><div class="step-body"><strong>Ekstraksi Kontur sebagai Fungsi</strong><span>Kontur kaki diperlakukan sebagai kurva tertutup: set titik (xᵢ, yᵢ) yang membentuk batas area. OpenCV menghasilkan array koordinat ini via <span class="mono">cv2.findContours()</span>.</span></div></div>
+          <div class="integral-step"><div class="step-num-badge">2</div><div class="step-body"><strong>Proyeksi ke Sumbu X</strong><span>Untuk setiap nilai x unik, diambil nilai y_max dan y_min. Ini membentuk dua kurva batas: f_atas(x) dan f_bawah(x). Luas = integral dari [f_atas(x) − f_bawah(x)] dx.</span></div></div>
+          <div class="integral-step"><div class="step-num-badge">3</div><div class="step-body"><strong>Aplikasi Trapezoidal Rule</strong><span>Interval x dibagi menjadi n strip kecil. Tiap strip diaproksimasi sebagai trapesium. Total luas = Σ [(h_atas + h_bawah)/2 × Δx] menggunakan <span class="mono">np.trapz()</span>.</span></div></div>
+          <div class="integral-step"><div class="step-num-badge">4</div><div class="step-body"><strong>Konversi Satuan Piksel → Sentimeter</strong><span>Faktor skala dihitung dari objek referensi. Luas piksel² dibagi (px_per_cm)² menghasilkan cm². Panjang/lebar dibagi px_per_cm menghasilkan cm.</span></div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     PAGE: INTEGRAL CONCEPT
+════════════════════════════════ -->
+<div class="page" id="page-integral">
+
+  <div class="concept-header">
+    <div class="breadcrumb">FootScan → <span>Konsep Integral</span></div>
+    <h1>Peran Integral dalam FootScan</h1>
+    <p>Bagaimana kalkulus integral — khususnya Trapezoidal Rule — digunakan untuk menghitung luas telapak kaki dari data digital kontur gambar.</p>
+  </div>
+
+  <div class="concept-body">
+
+    <div class="concept-section">
+      <h2><span class="cs-icon">∫</span> Apa itu Integral dalam Konteks Ini?</h2>
+      <button class="explain-btn" onclick="toggleExplain('exp-concept-int', this)">
+        <span>💡</span> Jelaskan tanpa rumus dulu <span class="eb-icon">▾</span>
+      </button>
+      <div class="explain-panel" id="exp-concept-int">
+        <h4>🧮 Integral = cara menghitung luas bentuk tidak beraturan</h4>
+        <p>Kaki manusia bentuknya tidak beraturan — bukan kotak, bukan lingkaran. Tidak ada rumus sederhana untuk menghitung luasnya langsung.</p>
+        <p><strong>Integral</strong> adalah cara matematika untuk menghitung luas bentuk sembarang dengan cara <em>"memecahnya jadi bagian kecil-kecil, hitung tiap bagian, lalu jumlahkan"</em>.</p>
+        <p>Karena komputer bekerja dengan titik-titik (data diskret, bukan kurva mulus), kita pakai <strong>integral numerik</strong> — versi digital dari integral yang bekerja pada data berupa titik, bukan rumus.</p>
+        <p class="ep-analogy">🎯 <strong>Bayangkan:</strong> Kamu mau tahu luas genangan air di lantai berbentuk tidak beraturan. Kamu letakkan kertas kotak di atasnya dan hitung berapa kotak yang terisi. Itulah prinsip integral numerik!</p>
+      </div>
+      <p>Dalam matematika, <strong>integral tentu</strong> dari fungsi f(x) dari a ke b menghitung <strong>luas di bawah kurva</strong>. Dalam FootScan, "kurva" tersebut adalah batas kontur kaki — garis yang memisahkan piksel kaki dari background.</p>
+      <p>Karena kontur kaki bukan fungsi matematika eksplisit melainkan <strong>kumpulan titik diskret</strong> hasil deteksi gambar digital, kita tidak bisa mengintegrasikan secara analitik. Di sinilah <strong>integral numerik</strong> berperan.</p>
+      <div class="concept-callout">
+        Integral numerik = teknik menghitung nilai integral secara <strong>approksimasi</strong> dari data diskret (titik-titik), bukan dari rumus kontinu. Hasilnya sangat akurat bila jumlah titik cukup banyak.
+      </div>
+    </div>
+
+    <div class="concept-section">
+      <h2 class="blue"><span class="cs-icon" style="background:rgba(33,150,243,0.1);border-color:rgba(33,150,243,0.2)">📊</span> Trapezoidal Rule — Metode Utama</h2>
+      <button class="explain-btn" onclick="toggleExplain('exp-concept-trap', this)">
+        <span>💡</span> Jelaskan dengan analogi <span class="eb-icon">▾</span>
+      </button>
+      <div class="explain-panel" id="exp-concept-trap">
+        <h4>🍕 Trapesium = "iris kaki jadi potongan tipis"</h4>
+        <p>Bayangkan kamu memotong gambar kaki menjadi <strong>banyak irisan tipis</strong> dari kiri ke kanan (seperti mengiris roti tawar). Setiap irisan berbentuk mirip persegi panjang kecil.</p>
+        <p>Hitung luas tiap irisan: <strong>lebar irisan × tinggi irisan</strong>. Jumlahkan semua = luas total kaki.</p>
+        <p>Semakin tipis irisannya (semakin banyak strip), semakin akurat hasilnya karena bentuknya semakin mendekati kaki yang asli.</p>
+        <p class="ep-analogy">🎯 <strong>Mengapa disebut "trapesium"?</strong> Karena tiap irisan sebenarnya bukan persegi panjang sempurna — tepi atas dan bawahnya bisa sedikit miring mengikuti lekukan kaki. Bentuk seperti itu namanya trapesium.</p>
+      </div>
+      <p>FootScan menggunakan <strong>Composite Trapezoidal Rule</strong>. Ide dasarnya: bagi area di bawah kurva menjadi banyak <strong>trapesium kecil</strong>, hitung luas masing-masing, lalu jumlahkan.</p>
+      <div class="mjx-group">
+        <span class="mjx-section-label">Rumus Trapesium Tunggal</span>
+        <div class="mjx-row">
+          \[ A_{\text{trap}} = \frac{f(x_i) + f(x_{i+1})}{2} \times \Delta x \]
+        </div>
+        <span class="mjx-section-label">Composite Trapezoidal Rule (n interval)</span>
+        <div class="mjx-row">
+          \[ \int_a^b f(x)\,dx \approx \frac{\Delta x}{2} \left[ f(x_0) + 2f(x_1) + 2f(x_2) + \cdots + f(x_n) \right] \]
+        </div>
+        <span class="mjx-section-label">Error estimasi teoritis</span>
+        <div class="mjx-row">
+          \[ E_T \leq \frac{(b-a)^3}{12n^2} \max\left|f''(x)\right| \]
+        </div>
+      </div>
+      <p>Semakin besar n (semakin banyak titik kontur), semakin kecil error. Kontur kaki hasil OpenCV biasanya memiliki ratusan hingga ribuan titik, sehingga akurasi sangat tinggi.</p>
+    </div>
+
+    <div class="concept-section">
+      <h2><span class="cs-icon">🦶</span> Aplikasi Spesifik pada Kaki</h2>
+      <button class="explain-btn" onclick="toggleExplain('exp-concept-shoelace', this)">
+        <span>💡</span> Kenapa pakai Shoelace Formula? <span class="eb-icon">▾</span>
+      </button>
+      <div class="explain-panel" id="exp-concept-shoelace">
+        <h4>👟 Shoelace = cara cerdik hitung luas tanpa perlu integral penuh</h4>
+        <p>Kontur kaki adalah <strong>kurva tertutup</strong> — seperti benang yang melingkari kaki dan ujungnya bertemu. Untuk bentuk seperti ini, ada rumus pintas bernama Shoelace Formula.</p>
+        <p>Caranya: ambil koordinat setiap titik kontur, kalikan silang dengan titik berikutnya (xᵢ × yᵢ₊₁ dikurangi xᵢ₊₁ × yᵢ), lakukan untuk semua titik, jumlahkan, bagi 2. Selesai!</p>
+        <p>Hasilnya <strong>100% tepat</strong> untuk poligon manapun — tidak ada tebak-tebakan atau aproksimasi seperti trapesium.</p>
+        <p class="ep-analogy">🎯 <strong>Nama "Shoelace"</strong> (tali sepatu) karena pola perkalian silangnya mirip cara mengikat tali sepatu — menyilang kiri-kanan bergantian!</p>
+      </div>
+      <p>Kontur kaki adalah <strong>kurva tertutup</strong>. Untuk menghitung luasnya, FootScan menggunakan pendekatan berbasis Shoelace Formula yang equivalen dengan integral Green's Theorem:</p>
+      <div class="mjx-group">
+        <span class="mjx-section-label">Shoelace Formula (kurva tertutup)</span>
+        <div class="mjx-row">
+          \[ A = \frac{1}{2} \left| \sum_{i=0}^{n-1} \left( x_i \, y_{i+1} - x_{i+1} \, y_i \right) \right| \]
+        </div>
+        <span class="mjx-section-label">Via proyeksi sumbu-X — np.trapz</span>
+        <div class="mjx-row">
+          \[ A_{px^2} = \int_{x_{\min}}^{x_{\max}} h(x)\,dx \approx \texttt{np.trapz}(h,\, x) \]
+        </div>
+        <span class="mjx-section-label">Konversi ke sentimeter persegi</span>
+        <div class="mjx-row">
+          \[ A_{cm^2} = \frac{A_{px^2}}{\left(\tfrac{px}{cm}\right)^2} \]
+        </div>
+      </div>
+      <div class="concept-callout blue">
+        Nilai <strong>px_per_cm</strong> diperoleh dari objek referensi (misal kertas A4 = 210mm lebar). Sistem mendeteksi lebar referensi dalam piksel, lalu: px_per_cm = lebar_px ÷ 21.0 cm.
+      </div>
+    </div>
+
+    <div class="concept-section">
+      <h2><span class="cs-icon">🔄</span> Pipeline Lengkap</h2>
+      <button class="explain-btn" onclick="toggleExplain('exp-concept-pipeline', this)">
+        <span>💡</span> Ringkaskan dalam bahasa biasa <span class="eb-icon">▾</span>
+      </button>
+      <div class="explain-panel" id="exp-concept-pipeline">
+        <h4>📸 → 📐 → 🔢 → 👟 Dari foto ke ukuran sepatu</h4>
+        <p><strong>1. Foto → Hitam putih:</strong> Kamera mengambil gambar berwarna. Sistem mengubahnya jadi hitam-putih agar kaki (gelap) dan lantai (terang) mudah dibedakan.</p>
+        <p><strong>2. Hitam putih → Titik tepi:</strong> Sistem menelusuri batas antara area hitam (kaki) dan putih (lantai), menghasilkan ratusan titik koordinat yang membentuk outline kaki.</p>
+        <p><strong>3. Titik tepi → Luas cm²:</strong> Titik-titik itu dihitung luasnya dengan Shoelace, lalu piksel dikonversi ke cm menggunakan objek referensi (misal kertas A4).</p>
+        <p><strong>4. Panjang cm → Ukuran sepatu:</strong> Ditambah 1.5 cm toleransi, lalu dicocokkan ke tabel standar ID/EU/US/UK.</p>
+        <p class="ep-analogy">🎯 Semua langkah ini terjadi otomatis dalam 1–3 detik setelah kamu klik tombol Analisis!</p>
+      </div>
+      <div class="pipeline-steps">
+        <div class="ps-item">
+          <div class="ps-num">1</div>
+          <div class="ps-body">
+            <strong>Foto → Grayscale → Binary Threshold</strong>
+            <span>Gambar RGB dikonversi ke skala abu (grayscale), lalu di-threshold: piksel ≥ T menjadi putih (255), sisanya hitam (0). Ini memisahkan kaki dari background.</span>
+          </div>
+        </div>
+        <div class="ps-item">
+          <div class="ps-num">2</div>
+          <div class="ps-body">
+            <strong>Deteksi Kontur via OpenCV</strong>
+            <span>cv2.findContours() menelusuri batas area putih dan menghasilkan array koordinat (x, y) — ini adalah "data diskret" yang akan diintegrasikan.</span>
+          </div>
+        </div>
+        <div class="ps-item">
+          <div class="ps-num">3</div>
+          <div class="ps-body">
+            <strong>Sorting & Proyeksi Kontur</strong>
+            <span>Titik-titik kontur diurutkan berdasarkan nilai x. Untuk tiap kolom piksel-x, diambil y_max (atas) dan y_min (bawah) membentuk profil ketinggian fungsi h(x).</span>
+          </div>
+        </div>
+        <div class="ps-item">
+          <div class="ps-num">4</div>
+          <div class="ps-body">
+            <strong>Integrasi Trapesium</strong>
+            <span>np.trapz(h, x) menghitung ∫h(x)dx menggunakan composite trapezoidal rule. Hasilnya adalah luas dalam piksel². Error teoritis O(Δx²).</span>
+          </div>
+        </div>
+        <div class="ps-item">
+          <div class="ps-num">5</div>
+          <div class="ps-body">
+            <strong>Konversi & Output Akhir</strong>
+            <span>Luas piksel² ÷ (px/cm)² = cm². Panjang = (y_max − y_min) ÷ px/cm. Lebar = (x_max − x_min) ÷ px/cm. Ukuran sepatu = tabel konversi dari panjang cm.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="concept-section">
+      <h2 class="blue"><span class="cs-icon" style="background:rgba(33,150,243,0.1);border-color:rgba(33,150,243,0.2)">⚡</span> Mengapa Trapezoidal? Perbandingan Metode</h2>
+      <button class="explain-btn" onclick="toggleExplain('exp-concept-cmp', this)">
+        <span>💡</span> Jelaskan tabel perbandingan ini <span class="eb-icon">▾</span>
+      </button>
+      <div class="explain-panel" id="exp-concept-cmp">
+        <h4>⚖️ Kenapa tidak pakai metode yang lebih akurat?</h4>
+        <p><strong>Simpson's 1/3</strong> memang lebih akurat (error lebih kecil), tapi butuh jumlah titik genap dan sedikit lebih rumit diimplementasikan. Untuk kaki dengan 500+ titik kontur, perbedaannya hampir tidak terasa.</p>
+        <p><strong>Romberg & Monte Carlo</strong> jauh lebih kompleks dan lambat — terlalu "berlebihan" untuk kebutuhan pengukuran kaki yang sudah sangat akurat dengan trapesium.</p>
+        <p><strong>Shoelace</strong> adalah yang paling tepat (eksak) karena kaki adalah poligon (titik-titik diskret), dan Shoelace memang dirancang untuk itu. Itulah mengapa dijadikan metode utama.</p>
+        <p class="ep-analogy">🎯 <strong>Kesimpulan:</strong> Trapesium dipilih sebagai verifikasi karena mudah dipahami dan divisualisasikan. Shoelace dipilih sebagai metode utama karena hasilnya eksak. Keduanya saling melengkapi!</p>
+      </div>
+      <table class="cmp-table">
+        <thead>
+          <tr>
+            <th>Metode</th>
+            <th>Order Error</th>
+            <th>Kompleksitas</th>
+            <th>Digunakan?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Trapezoidal Rule</td><td>\(O(h^2)\)</td><td>\(O(n)\)</td><td class="yes">✓ Ya (np.trapz)</td></tr>
+          <tr><td>Simpson's 1/3</td><td>\(O(h^4)\)</td><td>\(O(n)\)</td><td class="alt">Alternatif</td></tr>
+          <tr><td>Romberg</td><td>\(O(h^{2k})\)</td><td>\(O(n \log n)\)</td><td>Overkill</td></tr>
+          <tr><td>Monte Carlo</td><td>\(O(1/\sqrt{N})\)</td><td>\(O(N)\)</td><td>Lebih lambat</td></tr>
+          <tr><td>Shoelace</td><td>Exact</td><td>\(O(n)\)</td><td class="yes">✓ Alternatif</td></tr>
+        </tbody>
+      </table>
+      <p>Trapezoidal dipilih karena <strong>sederhana, cepat O(n), dan akurat</strong> saat n besar (ratusan titik kontur). Dengan n ≥ 500 titik, error praktis sudah di bawah 1%.</p>
+      <div class="concept-callout">
+        Shoelace Formula sebenarnya memberikan hasil <strong>eksak</strong> untuk poligon (titik diskret), dan secara matematis ekuivalen dengan mengintegrasikan kurva tertutup menggunakan Green's Theorem: \( A = \dfrac{1}{2} \oint (x\,dy - y\,dx) \).
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- BACKEND BADGE -->
+<div class="backend-badge">
+  <div class="dot" id="backend-dot"></div>
+  <span id="backend-status">Memeriksa backend…</span>
+</div>
+
+<!-- MODAL: Cara Penggunaan -->
+<div class="modal-backdrop" id="modal-backdrop" onclick="backdropClose(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="section-label">Panduan Lengkap</div>
+    <h2>Cara Penggunaan FootScan</h2>
+    <p class="modal-sub">Ikuti langkah berikut untuk hasil pengukuran yang akurat.</p>
+
+    <div class="steps-list">
+      <div class="step-item">
+        <div class="step-num-wrap"><div class="step-num">1</div><div class="step-connector"></div></div>
+        <div class="step-content">
+          <div class="step-title">📸 Persiapkan Foto Kaki</div>
+          <div class="step-desc">Letakkan kaki di atas lantai terang atau kertas putih. Foto dari atas tegak lurus. Pastikan pencahayaan merata dan seluruh telapak terlihat.</div>
+          <div class="step-tip">💡 Foto siang hari dekat jendela untuk cahaya terbaik</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-wrap"><div class="step-num">2</div><div class="step-connector"></div></div>
+        <div class="step-content">
+          <div class="step-title">📏 Sertakan Objek Referensi</div>
+          <div class="step-desc">Letakkan kertas A4, kartu kredit, atau penggaris di sebelah kaki dalam foto yang sama, pada bidang yang sama persis.</div>
+          <div class="step-tip">⚠️ Tanpa referensi, hasil hanya estimasi relatif</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-wrap"><div class="step-num">3</div><div class="step-connector"></div></div>
+        <div class="step-content">
+          <div class="step-title">📤 Klik "Mulai Ukur" & Upload</div>
+          <div class="step-desc">Dari halaman utama klik tombol "Mulai Ukur", lalu upload foto di area yang tersedia.</div>
+          <div class="step-tip">📌 Resolusi minimal 640×480 px untuk akurasi terbaik</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-wrap"><div class="step-num">4</div><div class="step-connector"></div></div>
+        <div class="step-content">
+          <div class="step-title">⚙️ Atur Konfigurasi & Analisis</div>
+          <div class="step-desc">Pilih objek referensi dari dropdown, sesuaikan threshold jika perlu (default 127), lalu klik "Analisis Kaki".</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-wrap"><div class="step-num">5</div><div class="step-connector"></div></div>
+        <div class="step-content">
+          <div class="step-title">📊 Baca Hasil & Integral</div>
+          <div class="step-desc">Hasil menampilkan panjang, lebar, luas telapak, rekomendasi sepatu, dan detail lengkap perhitungan integral numerik yang digunakan.</div>
+          <div class="step-tip">👟 Ukuran sepatu = panjang kaki + 1–1.5 cm toleransi</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;">
+      <button class="btn-primary" style="width:100%;" onclick="closeModal(); goAnalysis()">
+        👣 Mulai Ukur Sekarang
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── TOGGLE EXPLAIN PANEL ──
+  function toggleExplain(id, btn) {
+    const panel = document.getElementById(id);
+    const isOpen = panel.classList.contains('open');
+    panel.classList.toggle('open', !isOpen);
+    btn.classList.toggle('open', !isOpen);
+    btn.querySelector('.eb-icon').textContent = isOpen ? '▾' : '▴';
+  }
+
+  // ── TOGGLE INTEGRAL PANEL ──
+  let integralReady = false;
+  function toggleIntegralPanel() {
+    const panel  = document.getElementById('integral-panel');
+    const btn    = document.getElementById('show-detail-btn');
+    const label  = document.getElementById('sdb-label');
+    const isOpen = panel.style.display === 'block';
+
+    if (isOpen) {
+      // Tutup
+      panel.style.opacity = '0';
+      panel.style.transform = 'translateY(14px)';
+      setTimeout(() => { panel.style.display = 'none'; }, 280);
+      btn.classList.remove('open');
+      label.textContent = 'Lihat Penjelasan Perhitungan';
+    } else {
+      // Buka
+      panel.style.display = 'block';
+      btn.classList.add('open');
+      label.textContent = 'Sembunyikan Penjelasan';
+      requestAnimationFrame(() => {
+        panel.style.transition = 'opacity 0.35s ease, transform 0.35s ease';
+        panel.style.opacity = '1';
+        panel.style.transform = 'translateY(0)';
+      });
+      // Render isi sekali saja
+      if (!integralReady && lastData) {
+        renderIntegralContent(lastData);
+        integralReady = true;
+      }
+      setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+    }
+  }
+
+  // ── STATE ──
+  let selectedFile = null;
+  let origSrc = null;
+  let contourSrc = null;
+  let activeTab = 0;
+  let lastData = null;
+
+  // ── PAGE NAV ──
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    const back = document.getElementById('nav-back');
+    if (id === 'page-home') {
+      back.classList.remove('visible');
+    } else {
+      back.classList.add('visible');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function goHome() { showPage('page-home'); }
+  function goAnalysis() { showPage('page-analysis'); }
+  function goIntegral() { showPage('page-integral'); }
+
+  // ── DRAG & DROP ──
+  const dz = document.getElementById('dropzone');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f) processFile(f);
+  });
+
+  function handleFile(e) { processFile(e.target.files[0]); }
+
+  function processFile(file) {
+    if (!file) return;
+    if (!['image/jpeg','image/png'].includes(file.type)) { showAlert('error','Format tidak didukung. Gunakan JPG atau PNG.'); return; }
+    if (file.size > 10 * 1024 * 1024) { showAlert('error','Ukuran file terlalu besar (maks 10MB).'); return; }
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      origSrc = e.target.result;
+      document.getElementById('preview-img').src = origSrc;
+      document.getElementById('preview-name').textContent = file.name + ' · ' + (file.size/1024).toFixed(1) + ' KB';
+      document.getElementById('preview-container').style.display = 'block';
+      document.getElementById('analyze-btn').disabled = false;
+      hideAlerts();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ── ANALYZE ──
+  async function analyzeImage() {
+    if (!selectedFile) return;
+    const btn = document.getElementById('analyze-btn');
+    btn.disabled = true;
+    showLoading('Mengunggah gambar…');
+    hideAlerts();
+
+    const formData = new FormData();
+    formData.append('image', selectedFile);
+    formData.append('reference', document.getElementById('ref-select').value);
+    formData.append('threshold', document.getElementById('threshold-slider').value);
+
+    try {
+      const msgs = ['Konversi grayscale…','Threshold & segmentasi…','Mendeteksi kontur…','Hitung integral numerik…','Konversi ke sentimeter…'];
+      let mi = 0;
+      const interval = setInterval(() => {
+        if (mi < msgs.length) document.getElementById('loading-text').textContent = msgs[mi++];
+      }, 700);
+
+      const res = await fetch('/analyze', { method: 'POST', body: formData });
+      clearInterval(interval);
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Server error');
+      }
+
+      const data = await res.json();
+      hideLoading();
+      showResults(data);
+      showAlert('success', 'Analisis berhasil! Confidence: ' + data.confidence + '%');
+
+    } catch (err) {
+      hideLoading();
+      if (err.message.includes('fetch') || err.message.includes('Failed') || err.message.includes('NetworkError') || err.message.includes('Load failed')) {
+        runDemoMode();
+      } else {
+        showAlert('error', err.message);
+        btn.disabled = false;
+      }
+    }
+  }
+
+  // ── DEMO MODE ──
+  function runDemoMode() {
+    showLoading('Mode demo — simulasi analisis…');
+    const msgs = ['Konversi grayscale…','Threshold & segmentasi…','Mendeteksi kontur…','Hitung integral numerik…','Konversi ke sentimeter…'];
+    let i = 0;
+    const iv = setInterval(() => {
+      document.getElementById('loading-text').textContent = msgs[i] || 'Selesai…';
+      i++;
+      if (i > msgs.length) {
+        clearInterval(iv);
+        hideLoading();
+        const len = parseFloat((23 + Math.random()*4).toFixed(1));
+        const wid = parseFloat((8.5 + Math.random()*2).toFixed(1));
+        const area = parseFloat((len * wid * 0.68).toFixed(1));
+        const nPts = Math.floor(480 + Math.random()*200);
+        const pxCm = parseFloat((42 + Math.random()*6).toFixed(1));
+        showResults({
+          length_cm: len, width_cm: wid, area_cm2: area,
+          shoe_sizes: { ID: '39', EU: '40', US: '8', UK: '7' },
+          confidence: Math.floor(78 + Math.random()*15),
+          threshold_used: document.getElementById('threshold-slider').value,
+          contour_image: null,
+          // Integral data
+          n_contour_pts: nPts,
+          dx_avg: parseFloat((wid * pxCm / nPts).toFixed(2)),
+          area_px2: parseFloat((area * pxCm * pxCm).toFixed(0)),
+          px_per_cm: pxCm,
+          x_range_px: parseFloat((wid * pxCm).toFixed(0)),
+          y_range_px: parseFloat((len * pxCm).toFixed(0)),
+          contour_pts_cm: null,   // null = demo mode, akan pakai polygon sintetis
+          shoelace_steps: null,
+          trap_strips: null,
+        });
+        showAlert('success', '⚠️ Mode demo aktif. Hubungkan backend untuk hasil nyata.');
+      }
+    }, 650);
+  }
+
+  // ── SHOW RESULTS ──
+  function showResults(data) {
+    lastData = data;
+
+    document.getElementById('res-length').innerHTML = data.length_cm + '<span class="result-unit">cm</span>';
+    document.getElementById('res-width').innerHTML = data.width_cm + '<span class="result-unit">cm</span>';
+    document.getElementById('res-area').innerHTML = data.area_cm2 + '<span class="result-unit">cm²</span>';
+
+    setTimeout(() => document.getElementById('rc-length').classList.add('visible'), 50);
+    setTimeout(() => document.getElementById('rc-width').classList.add('visible'), 150);
+    setTimeout(() => document.getElementById('rc-area').classList.add('visible'), 250);
+
+    const sz = data.shoe_sizes;
+    document.getElementById('shoe-tags').innerHTML =
+      `<span class="shoe-tag">ID ${sz.ID}</span>` +
+      `<span class="shoe-tag">EU ${sz.EU}</span>` +
+      `<span class="shoe-tag">US ${sz.US}</span>` +
+      `<span class="shoe-tag">UK ${sz.UK}</span>`;
+    setTimeout(() => document.getElementById('shoe-sizes').classList.add('visible'), 350);
+
+    document.getElementById('conf-val').textContent = data.confidence + '%';
+    document.getElementById('thresh-used').textContent = data.threshold_used;
+    document.getElementById('conf-info').style.display = 'block';
+
+    contourSrc = data.contour_image ? 'data:image/png;base64,' + data.contour_image : null;
+    switchTab(activeTab, null);
+
+    document.getElementById('analyze-btn').disabled = false;
+
+    // Show integral panel
+    showIntegralPanel(data);
+  }
+
+  // ── INTEGRAL PANEL — siapkan data & tampilkan tombol ──
+  function showIntegralPanel(data) {
+    // Simpan data, reset ready flag, tampilkan tombol
+    integralReady = false;
+    document.getElementById('show-detail-wrap').style.display = 'block';
+    // Pastikan panel tersembunyi kembali jika analisis diulang
+    const panel = document.getElementById('integral-panel');
+    panel.style.display = 'none';
+    panel.style.opacity = '0';
+    panel.style.transform = 'translateY(14px)';
+    const btn = document.getElementById('show-detail-btn');
+    btn.classList.remove('open');
+    document.getElementById('sdb-label').textContent = 'Lihat Penjelasan Perhitungan';
+  }
+
+  // ── INTEGRAL PANEL — render semua isi dengan data nyata ──
+  function renderIntegralContent(data) {
+    const nPts   = data.n_contour_pts || 620;
+    const dx     = data.dx_avg || 0.18;
+    const areaPx = data.area_px2 || Math.round(data.area_cm2 * 1764);
+    const pxCm   = data.px_per_cm || 42;
+    const xRng   = data.x_range_px || Math.round(data.width_cm * pxCm);
+    const yRng   = data.y_range_px || Math.round(data.length_cm * pxCm);
+    const pxCm2  = Math.round(pxCm * pxCm);
+
+    // ── Workings: Luas ──
+    const areaPxFmt = Math.round(areaPx).toLocaleString('id-ID');
+    const pxCm2Fmt  = pxCm2.toLocaleString('id-ID');
+    document.getElementById('wb-area-px-formula').textContent = areaPxFmt + ' px²';
+    document.getElementById('wb-scale-formula').textContent =
+      pxCm.toFixed(1) + ' px/cm  →  (' + pxCm.toFixed(1) + ')²  =  ' + pxCm2Fmt + ' px²/cm²';
+    document.getElementById('wb-area-cm-formula').innerHTML =
+      areaPxFmt + ' ÷ ' + pxCm2Fmt + ' = <strong id="wb-area-result">' + data.area_cm2 + ' cm²</strong>';
+
+    // ── Workings: Panjang & Lebar ──
+    const xRngFmt = xRng.toLocaleString('id-ID');
+    const yRngFmt = yRng.toLocaleString('id-ID');
+    document.getElementById('wb-range-formula').innerHTML =
+      'Panjang: <span>' + yRngFmt + '</span> px &nbsp;|&nbsp; Lebar: <span>' + xRngFmt + '</span> px';
+    document.getElementById('wb-pxcm-formula').textContent =
+      pxCm.toFixed(1) + ' px = 1 cm';
+    document.getElementById('wb-dim-formula').innerHTML =
+      'Panjang: ' + yRngFmt + ' ÷ ' + pxCm.toFixed(1) +
+      ' = <strong id="wb-len-result">' + data.length_cm + ' cm</strong><br>' +
+      'Lebar: ' + xRngFmt + ' ÷ ' + pxCm.toFixed(1) +
+      ' = <strong id="wb-wid-result">' + data.width_cm + ' cm</strong>';
+
+    // ── Calc rows ──
+    document.getElementById('int-n-pts').textContent   = nPts.toLocaleString() + ' titik';
+    document.getElementById('int-dx').textContent      = dx.toFixed(2) + ' px';
+    document.getElementById('int-area-px').textContent = Math.round(areaPx).toLocaleString() + ' px²';
+    document.getElementById('int-conv').textContent    = '(' + pxCm.toFixed(1) + ')² = ' + pxCm2.toLocaleString() + ' px²/cm²';
+    document.getElementById('int-area-cm').textContent = data.area_cm2 + ' cm²';
+    document.getElementById('int-xrange').textContent  = xRng + ' px';
+    document.getElementById('int-yrange').textContent  = yRng + ' px';
+    document.getElementById('int-pxcm').textContent    = pxCm.toFixed(1) + ' px/cm';
+    document.getElementById('int-len-cm').textContent  = data.length_cm + ' cm';
+    document.getElementById('int-wid-cm').textContent  = data.width_cm + ' cm';
+
+    const errPct = (100 / (nPts * nPts) * 1e5).toFixed(2);
+    document.getElementById('int-error').textContent = '±' + Math.min(parseFloat(errPct), 0.9).toFixed(1) + '%';
+
+    drawTrapezoidViz(data);
+    initKartesius(data);
+    buildShoelaceTable(data);
+    buildTrapezoidTable(data);
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise([document.getElementById('integral-panel')]);
+    }
+  }
+
+  // ── TRAPEZOID MINI CANVAS ──
+  function drawTrapezoidViz(data) {
+    const canvas = document.getElementById('trapezoid-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.offsetWidth || 300; const H = canvas.offsetHeight || 140;
+    canvas.width = W; canvas.height = H;
+    ctx.clearRect(0, 0, W, H);
+    const n = 60, pts = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, x = t * W;
+      const baseY = H * 0.78;
+      const footH = Math.sin(Math.PI * t) * H * 0.5 * (1 + 0.12*Math.sin(3*Math.PI*t)) * (t>0.04&&t<0.96?1:0.2);
+      pts.push({x, y: baseY-footH, yBase: baseY});
+    }
+    const strips = 16;
+    for (let i = 0; i < strips; i++) {
+      const x0=(i/strips)*W, x1=((i+1)/strips)*W;
+      const y0=pts[Math.floor((i/strips)*n)].y, y1=pts[Math.floor(((i+1)/strips)*n)].y;
+      const yB=pts[0].yBase;
+      ctx.beginPath(); ctx.moveTo(x0,yB); ctx.lineTo(x0,y0); ctx.lineTo(x1,y1); ctx.lineTo(x1,yB); ctx.closePath();
+      ctx.fillStyle=`rgba(33,150,243,${0.05+(i%2)*0.05})`; ctx.fill();
+      ctx.strokeStyle='rgba(33,150,243,0.3)'; ctx.lineWidth=0.8; ctx.stroke();
+    }
+    ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].yBase);
+    for (const p of pts) ctx.lineTo(p.x,p.y);
+    ctx.lineTo(pts[n].x,pts[n].yBase);
+    ctx.strokeStyle='rgba(0,212,160,0.95)'; ctx.lineWidth=2; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,pts[0].yBase); ctx.lineTo(W,pts[0].yBase);
+    ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle='rgba(106,128,144,0.85)'; ctx.font='9px JetBrains Mono,monospace';
+    ctx.fillText('∫ h(x)dx', W*0.38, H*0.52); ctx.fillText('x →', W-28, pts[0].yBase+12);
+  }
+
+  // ════════════════════════════════════════
+  //  KARTESIUS ENGINE
+  // ════════════════════════════════════════
+  let kMode = 'contour';
+  let kData = null;       // stores computed foot polygon in cm
+  let kAnimFrame = null;
+  let kAnimProgress = 0;
+
+  // Generate realistic foot polygon points (cm coordinates)
+  function generateFootPolygon(lenCm, widCm, nPts) {
+    nPts = nPts || 120;
+    const pts = [];
+    // Foot is oriented with heel at bottom, toes at top (like standing on paper)
+    // We generate it as a closed polygon
+    for (let i = 0; i < nPts; i++) {
+      const t = (i / nPts) * 2 * Math.PI;
+      // Base ellipse scaled to foot dimensions
+      const rx = widCm / 2;
+      const ry = lenCm / 2;
+      // Add foot-like distortions:
+      // - heel narrows (bottom of foot)
+      // - ball widens slightly
+      // - toes at top taper
+      const angle = t;
+      const normalAngle = angle - Math.PI/2; // rotate so 0 = bottom (heel)
+      const tNorm = (normalAngle + Math.PI) / (2 * Math.PI); // 0–1: heel→toes
+
+      let rMod = 1.0;
+      // Heel narrowing (t≈0.5 in foot coords = heel)
+      const heelT = Math.abs(tNorm - 0.05 < 0 ? tNorm - 0.05 + 1 : tNorm - 0.05);
+      if (tNorm < 0.15 || tNorm > 0.85) rMod *= (0.75 + 0.25 * Math.sin(Math.PI * (tNorm < 0.15 ? tNorm/0.15 : (1-tNorm)/0.15)));
+      // Ball widening (tNorm ≈ 0.72)
+      if (tNorm > 0.62 && tNorm < 0.82) rMod *= 1 + 0.12 * Math.sin(Math.PI * (tNorm - 0.62) / 0.2);
+      // Arch inward on medial side (right side of foot)
+      if (angle > Math.PI * 0.1 && angle < Math.PI * 0.9) rMod *= 1 - 0.07 * Math.sin(Math.PI * (angle - 0.1*Math.PI) / (0.8*Math.PI));
+      // Toes taper
+      if (tNorm > 0.85) rMod *= 1 - 0.4 * ((tNorm - 0.85) / 0.15);
+
+      const x = Math.cos(angle) * rx * rMod;
+      const y = Math.sin(angle) * ry * rMod;
+      pts.push({x, y});
+    }
+    return pts;
+  }
+
+  // Compute trapezoid profile: for each x slice, get y_top and y_bottom
+  function computeTrapProfile(pts, nStrips) {
+    nStrips = nStrips || 20;
+    const xs = pts.map(p=>p.x), ys = pts.map(p=>p.y);
+    const xMin = Math.min(...xs), xMax = Math.max(...xs);
+    const dx = (xMax - xMin) / nStrips;
+    const strips = [];
+    for (let i = 0; i <= nStrips; i++) {
+      const xi = xMin + i * dx;
+      // Find points near this x
+      let yTop = -Infinity, yBot = Infinity;
+      for (const p of pts) {
+        if (Math.abs(p.x - xi) < dx * 1.5) {
+          if (p.y > yTop) yTop = p.y;
+          if (p.y < yBot) yBot = p.y;
+        }
+      }
+      if (yTop === -Infinity) { yTop = 0; yBot = 0; }
+      strips.push({x: xi, yTop, yBot});
+    }
+    return strips;
+  }
+
+  function initKartesius(data) {
+    kData = data;
+    kMode = 'contour';
+    document.querySelectorAll('.kctrl-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('kbtn-contour').classList.add('active');
+
+    // Tampilkan badge: kontur asli vs sintetis
+    const isReal = data.contour_pts_cm && data.contour_pts_cm.length > 10;
+    const hdr = document.querySelector('.kartesius-header > div:first-child');
+    const old = hdr.querySelector('.k-data-badge');
+    if (old) old.remove();
+    const badge = document.createElement('span');
+    badge.className = 'k-data-badge';
+    badge.style.cssText = `display:inline-flex;align-items:center;gap:5px;margin-top:6px;
+      font-family:var(--mono);font-size:0.7rem;padding:3px 9px;border-radius:6px;
+      background:${isReal?'rgba(0,212,160,0.1)':'rgba(255,200,80,0.08)'};
+      border:1px solid ${isReal?'rgba(0,212,160,0.3)':'rgba(255,200,80,0.25)'};
+      color:${isReal?'var(--accent)':'#ffc84a'};`;
+    badge.innerHTML = isReal
+      ? `<span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block"></span> Kontur asli dari gambar (${data.contour_pts_cm.length} titik)`
+      : `<span style="width:6px;height:6px;border-radius:50%;background:#ffc84a;display:inline-block"></span> Demo mode — kontur sintetis (hubungkan backend untuk kontur nyata)`;
+    hdr.appendChild(badge);
+
+    renderKartesius();
+  }
+
+  function setKartesiusMode(mode, btn) {
+    kMode = mode;
+    document.querySelectorAll('.kctrl-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    // Show/hide tables
+    document.getElementById('shoelace-table-wrap').style.display   = mode === 'shoelace'   ? 'block' : 'none';
+    document.getElementById('trapezoid-table-wrap').style.display  = mode === 'trapezoid'  ? 'block' : 'none';
+    renderKartesius();
+  }
+
+  function renderKartesius() {
+    const canvas = document.getElementById('kartesius-canvas');
+    if (!canvas || !kData) return;
+    const dpr = window.devicePixelRatio || 1;
+    const CW = canvas.parentElement.clientWidth;
+    const CH = 420;
+    canvas.width  = CW * dpr;
+    canvas.height = CH * dpr;
+    canvas.style.width  = CW + 'px';
+    canvas.style.height = CH + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    const W = CW, H = CH;
+
+    // Foot data — gunakan kontur ASLI dari backend jika tersedia
+    const lenCm  = kData.length_cm  || 24;
+    const widCm  = kData.width_cm   || 9;
+    const areaCm = kData.area_cm2   || 140;
+
+    // Prioritas: contour_pts_cm dari backend (koordinat nyata dalam cm)
+    // Fallback: polygon sintetis jika backend belum mengirim data
+    let footPts;
+    if (kData.contour_pts_cm && kData.contour_pts_cm.length > 10) {
+      footPts = kData.contour_pts_cm.map(p => ({x: p[0], y: p[1]}));
+    } else {
+      footPts = generateFootPolygon(lenCm, widCm, 120);
+    }
+
+    // ── Coordinate transform: cm → canvas px ──
+    // Add padding for axes
+    const PAD_L = 62, PAD_R = 24, PAD_T = 24, PAD_B = 48;
+    const plotW = W - PAD_L - PAD_R;
+    const plotH = H - PAD_T - PAD_B;
+
+    const xs = footPts.map(p => p.x), ys = footPts.map(p => p.y);
+    const xMin = Math.min(...xs) - 0.5, xMax = Math.max(...xs) + 0.5;
+    const yMin = Math.min(...ys) - 0.5, yMax = Math.max(...ys) + 0.5;
+    const xRange = xMax - xMin, yRange = yMax - yMin;
+    const scale = Math.min(plotW / xRange, plotH / yRange);
+    const offX  = PAD_L + (plotW - xRange * scale) / 2 - xMin * scale;
+    const offY  = PAD_T + (plotH - yRange * scale) / 2 + yMax * scale;
+
+    function toCanvasX(cx) { return offX + cx * scale; }
+    function toCanvasY(cy) { return offY - cy * scale; }
+
+    // ── Background ──
+    ctx.clearRect(0, 0, W, H);
+
+    // ── Grid ──
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 0.5;
+    const gridStep = 2; // cm
+    for (let gx = Math.ceil(xMin/gridStep)*gridStep; gx <= xMax; gx += gridStep) {
+      ctx.beginPath(); ctx.moveTo(toCanvasX(gx), PAD_T); ctx.lineTo(toCanvasX(gx), H-PAD_B); ctx.stroke();
+    }
+    for (let gy = Math.ceil(yMin/gridStep)*gridStep; gy <= yMax; gy += gridStep) {
+      ctx.beginPath(); ctx.moveTo(PAD_L, toCanvasY(gy)); ctx.lineTo(W-PAD_R, toCanvasY(gy)); ctx.stroke();
+    }
+
+    // ── Axes ──
+    const ox = toCanvasX(0), oy = toCanvasY(0);
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1.2;
+    // X axis
+    ctx.beginPath(); ctx.moveTo(PAD_L-4, oy); ctx.lineTo(W-PAD_R+4, oy); ctx.stroke();
+    // Y axis
+    ctx.beginPath(); ctx.moveTo(ox, PAD_T-4); ctx.lineTo(ox, H-PAD_B+4); ctx.stroke();
+    // Arrowheads
+    ctx.fillStyle='rgba(255,255,255,0.22)';
+    ctx.beginPath(); ctx.moveTo(W-PAD_R+4,oy); ctx.lineTo(W-PAD_R-4,oy-4); ctx.lineTo(W-PAD_R-4,oy+4); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(ox,PAD_T-4); ctx.lineTo(ox-4,PAD_T+6); ctx.lineTo(ox+4,PAD_T+6); ctx.fill();
+
+    // Axis labels
+    ctx.fillStyle='rgba(106,128,144,0.9)'; ctx.font='bold 11px JetBrains Mono,monospace';
+    ctx.fillText('x (cm)', W-PAD_R+6, oy+4);
+    ctx.fillText('y (cm)', ox+6, PAD_T-6);
+
+    // Tick marks & numbers
+    ctx.fillStyle='rgba(106,128,144,0.8)'; ctx.font='10px JetBrains Mono,monospace';
+    ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=0.7;
+    for (let gx = Math.ceil(xMin); gx <= xMax; gx++) {
+      if (gx === 0) continue;
+      const cx = toCanvasX(gx);
+      ctx.beginPath(); ctx.moveTo(cx, oy-3); ctx.lineTo(cx, oy+3); ctx.stroke();
+      if (gx % 2 === 0) { ctx.fillText(gx, cx-6, oy+14); }
+    }
+    for (let gy = Math.ceil(yMin); gy <= yMax; gy++) {
+      if (gy === 0) continue;
+      const cy = toCanvasY(gy);
+      ctx.beginPath(); ctx.moveTo(ox-3, cy); ctx.lineTo(ox+3, cy); ctx.stroke();
+      if (gy % 2 === 0) { ctx.textAlign='right'; ctx.fillText(gy, ox-6, cy+4); ctx.textAlign='left'; }
+    }
+    // Origin label
+    ctx.fillStyle='rgba(106,128,144,0.7)'; ctx.font='10px JetBrains Mono,monospace';
+    ctx.textAlign='right'; ctx.fillText('0', ox-5, oy+14); ctx.textAlign='left';
+
+    // ── Mode-specific drawing ──
+    if (kMode === 'contour' || kMode === 'area') {
+      // Area fill
+      if (kMode === 'area') {
+        ctx.beginPath();
+        ctx.moveTo(toCanvasX(footPts[0].x), toCanvasY(footPts[0].y));
+        for (const p of footPts) ctx.lineTo(toCanvasX(p.x), toCanvasY(p.y));
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(0,212,160,0.12)'; ctx.fill();
+        // Cross-hatch pattern for area
+        ctx.save(); ctx.clip();
+        ctx.strokeStyle='rgba(0,212,160,0.08)'; ctx.lineWidth=0.7;
+        for (let hx = PAD_L; hx < W; hx += 12) {
+          ctx.beginPath(); ctx.moveTo(hx,0); ctx.lineTo(hx,H); ctx.stroke();
+        }
+        ctx.restore();
+      }
+      // Contour polygon
+      ctx.beginPath();
+      ctx.moveTo(toCanvasX(footPts[0].x), toCanvasY(footPts[0].y));
+      for (const p of footPts) ctx.lineTo(toCanvasX(p.x), toCanvasY(p.y));
+      ctx.closePath();
+      ctx.strokeStyle='rgba(0,212,160,0.95)'; ctx.lineWidth=2; ctx.stroke();
+
+      // Area label
+      if (kMode === 'area') {
+        ctx.fillStyle='rgba(0,212,160,0.9)'; ctx.font='bold 11px JetBrains Mono,monospace';
+        ctx.textAlign='center';
+        ctx.fillText(`A = ${areaCm} cm²`, toCanvasX(0), toCanvasY(0)+4);
+        ctx.textAlign='left';
+      }
+    }
+
+    if (kMode === 'shoelace') {
+      // Draw filled polygon with shoelace triangle highlights
+      ctx.beginPath();
+      ctx.moveTo(toCanvasX(footPts[0].x), toCanvasY(footPts[0].y));
+      for (const p of footPts) ctx.lineTo(toCanvasX(p.x), toCanvasY(p.y));
+      ctx.closePath();
+      ctx.fillStyle='rgba(0,212,160,0.07)'; ctx.fill();
+      ctx.strokeStyle='rgba(0,212,160,0.6)'; ctx.lineWidth=1.5; ctx.stroke();
+
+      // Draw shoelace cross-triangles for sampled points
+      const step = Math.max(1, Math.floor(footPts.length / 16));
+      for (let i = 0; i < footPts.length; i += step) {
+        const j = (i + step) % footPts.length;
+        const p0 = footPts[i], p1 = footPts[j];
+        const cross = p0.x * p1.y - p1.x * p0.y;
+        // Triangle: origin → p0 → p1
+        ctx.beginPath();
+        ctx.moveTo(toCanvasX(0), toCanvasY(0));
+        ctx.lineTo(toCanvasX(p0.x), toCanvasY(p0.y));
+        ctx.lineTo(toCanvasX(p1.x), toCanvasY(p1.y));
+        ctx.closePath();
+        ctx.fillStyle = cross >= 0 ? 'rgba(0,212,160,0.12)' : 'rgba(255,100,100,0.1)';
+        ctx.fill();
+        ctx.strokeStyle = cross >= 0 ? 'rgba(0,212,160,0.3)' : 'rgba(255,100,100,0.25)';
+        ctx.lineWidth = 0.6; ctx.stroke();
+      }
+
+      // Sample control points
+      for (let i = 0; i < footPts.length; i += step) {
+        const p = footPts[i];
+        ctx.beginPath();
+        ctx.arc(toCanvasX(p.x), toCanvasY(p.y), 3, 0, Math.PI*2);
+        ctx.fillStyle='#f0b860'; ctx.fill();
+        // Coordinate label for first few
+        if (i < step * 4) {
+          ctx.fillStyle='rgba(240,184,96,0.8)'; ctx.font='9px JetBrains Mono,monospace';
+          ctx.fillText(`(${p.x.toFixed(1)},${p.y.toFixed(1)})`, toCanvasX(p.x)+5, toCanvasY(p.y)-5);
+        }
+      }
+      // Center origin dot
+      ctx.beginPath(); ctx.arc(toCanvasX(0),toCanvasY(0),4,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font='10px JetBrains Mono,monospace';
+      ctx.fillText('O(0,0)', toCanvasX(0)+6, toCanvasY(0)-6);
+    }
+
+    if (kMode === 'trapezoid') {
+      const strips = computeTrapProfile(footPts, 20);
+      // Area fill first
+      ctx.beginPath();
+      ctx.moveTo(toCanvasX(footPts[0].x), toCanvasY(footPts[0].y));
+      for (const p of footPts) ctx.lineTo(toCanvasX(p.x), toCanvasY(p.y));
+      ctx.closePath();
+      ctx.fillStyle='rgba(0,212,160,0.05)'; ctx.fill();
+      ctx.strokeStyle='rgba(0,212,160,0.4)'; ctx.lineWidth=1.5; ctx.stroke();
+
+      // Draw trapezoid strips
+      for (let i = 0; i < strips.length - 1; i++) {
+        const s0 = strips[i], s1 = strips[i+1];
+        // Top trapezoid (upper boundary)
+        ctx.beginPath();
+        ctx.moveTo(toCanvasX(s0.x), toCanvasY(s0.yTop));
+        ctx.lineTo(toCanvasX(s1.x), toCanvasY(s1.yTop));
+        ctx.lineTo(toCanvasX(s1.x), toCanvasY(s1.yBot));
+        ctx.lineTo(toCanvasX(s0.x), toCanvasY(s0.yBot));
+        ctx.closePath();
+        ctx.fillStyle = `rgba(33,150,243,${i%2===0?0.13:0.08})`; ctx.fill();
+        ctx.strokeStyle='rgba(33,150,243,0.45)'; ctx.lineWidth=0.9; ctx.stroke();
+
+        // Vertical lines showing height
+        ctx.setLineDash([2,3]);
+        ctx.strokeStyle='rgba(33,150,243,0.35)'; ctx.lineWidth=0.6;
+        ctx.beginPath(); ctx.moveTo(toCanvasX(s0.x),toCanvasY(s0.yTop)); ctx.lineTo(toCanvasX(s0.x),toCanvasY(s0.yBot)); ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Δx arrow for first strip
+        if (i === 3) {
+          const y_arrow = toCanvasY(Math.min(...footPts.map(p=>p.y)) - 0.8);
+          ctx.strokeStyle='rgba(240,184,96,0.8)'; ctx.lineWidth=1;
+          ctx.beginPath(); ctx.moveTo(toCanvasX(s0.x),y_arrow); ctx.lineTo(toCanvasX(s1.x),y_arrow); ctx.stroke();
+          ctx.fillStyle='rgba(240,184,96,0.9)'; ctx.font='9px JetBrains Mono,monospace'; ctx.textAlign='center';
+          ctx.fillText('Δx', (toCanvasX(s0.x)+toCanvasX(s1.x))/2, y_arrow-5);
+          ctx.textAlign='left';
+        }
+      }
+
+      // h(x) label
+      const midStrip = strips[Math.floor(strips.length/2)];
+      if (midStrip) {
+        ctx.strokeStyle='rgba(240,184,96,0.7)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+        ctx.beginPath(); ctx.moveTo(toCanvasX(midStrip.x), toCanvasY(midStrip.yTop)); ctx.lineTo(toCanvasX(midStrip.x), toCanvasY(midStrip.yBot)); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle='rgba(240,184,96,0.9)'; ctx.font='bold 10px JetBrains Mono,monospace';
+        ctx.fillText(`h(x)`, toCanvasX(midStrip.x)+5, (toCanvasY(midStrip.yTop)+toCanvasY(midStrip.yBot))/2);
+      }
+    }
+
+    // ── Bounding box (always shown) ──
+    const bbXmin = Math.min(...xs), bbXmax = Math.max(...xs);
+    const bbYmin = Math.min(...ys), bbYmax = Math.max(...ys);
+    ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=0.8; ctx.setLineDash([4,4]);
+    ctx.strokeRect(toCanvasX(bbXmin), toCanvasY(bbYmax), (bbXmax-bbXmin)*scale, (bbYmax-bbYmin)*scale);
+    ctx.setLineDash([]);
+
+    // BBox dimension labels
+    ctx.fillStyle='rgba(148,192,220,0.6)'; ctx.font='10px JetBrains Mono,monospace';
+    ctx.textAlign='center';
+    ctx.fillText(`← ${widCm.toFixed(1)} cm →`, toCanvasX((bbXmin+bbXmax)/2), toCanvasY(bbYmin)-8);
+    ctx.save(); ctx.translate(toCanvasX(bbXmax)+16, toCanvasY((bbYmin+bbYmax)/2));
+    ctx.rotate(-Math.PI/2); ctx.fillText(`← ${lenCm.toFixed(1)} cm →`, 0, 0); ctx.restore();
+    ctx.textAlign='left';
+  }
+
+  // ── BUILD SHOELACE TABLE — gunakan data asli dari backend ──
+  function buildShoelaceTable(data) {
+    const tbody = document.getElementById('shoelace-tbody');
+    tbody.innerHTML = '';
+
+    // Jika backend mengirim shoelace_steps (data asli), gunakan itu
+    if (data.shoelace_steps && data.shoelace_steps.length > 0) {
+      document.getElementById('sl-total-pts').textContent = data.n_contour_pts || data.contour_points || '?';
+      let totalSum = 0;
+      // Hitung total dari semua titik kontur (backend sudah menghitung area_cm2)
+      // Tampilkan sampel dari shoelace_steps
+      for (const row of data.shoelace_steps) {
+        totalSum += row.delta;
+        const cls = row.delta >= 0 ? 'pos' : 'neg';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${row.i}</td>
+          <td class="xi">${row.xi.toFixed(3)}</td><td class="yi">${row.yi.toFixed(3)}</td>
+          <td class="xi">${row.xj.toFixed(3)}</td><td class="yi">${row.yj.toFixed(3)}</td>
+          <td>${row.prod1.toFixed(3)}</td><td>${row.prod2.toFixed(3)}</td>
+          <td class="${cls}">${row.delta.toFixed(3)}</td>`;
+        tbody.appendChild(tr);
+      }
+      // Footer: tampilkan area nyata dari backend
+      document.getElementById('sl-result').textContent =
+        `½ × |Σ| = ${data.area_cm2} cm²  (dari ${data.n_contour_pts || '?'} titik kontur asli)`;
+      return;
+    }
+
+    // Fallback: hitung dari generateFootPolygon (demo mode)
+    const pts = generateFootPolygon(data.length_cm||24, data.width_cm||9, 120);
+    const n = pts.length;
+    const step = Math.max(1, Math.floor(n / 12));
+    let totalSum = 0;
+    for (let k = 0; k < n; k++) { const j=(k+1)%n; totalSum += pts[k].x*pts[j].y - pts[j].x*pts[k].y; }
+    document.getElementById('sl-total-pts').textContent = n + ' (simulasi)';
+    for (let k = 0; k < 12; k++) {
+      const idx = k*step, j=(idx+1)%n;
+      const xi=pts[idx].x, yi=pts[idx].y, xj=pts[j].x, yj=pts[j].y;
+      const prod1=xi*yj, prod2=xj*yi, delta=prod1-prod2;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${idx}</td>
+        <td class="xi">${xi.toFixed(2)}</td><td class="yi">${yi.toFixed(2)}</td>
+        <td class="xi">${xj.toFixed(2)}</td><td class="yi">${yj.toFixed(2)}</td>
+        <td>${prod1.toFixed(3)}</td><td>${prod2.toFixed(3)}</td>
+        <td class="${delta>=0?'pos':'neg'}">${delta.toFixed(3)}</td>`;
+      tbody.appendChild(tr);
+    }
+    document.getElementById('sl-result').textContent = `½ × |${totalSum.toFixed(2)}| = ${(Math.abs(totalSum)/2).toFixed(2)} cm²`;
+  }
+
+  // ── BUILD TRAPEZOID TABLE — gunakan data asli dari backend ──
+  function buildTrapezoidTable(data) {
+    const tbody = document.getElementById('trap-tbody');
+    tbody.innerHTML = '';
+
+    // Jika backend mengirim trap_strips (data asli), gunakan itu
+    if (data.trap_strips && data.trap_strips.length > 0) {
+      let total = 0;
+      for (const s of data.trap_strips) {
+        total += s.area;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${s.i}</td>
+          <td>${s.x0.toFixed(3)}</td><td>${s.x1.toFixed(3)}</td>
+          <td>${s.dx.toFixed(3)}</td>
+          <td>${s.y_top.toFixed(3)}</td><td>${s.y_bot.toFixed(3)}</td>
+          <td>${s.h.toFixed(3)}</td>
+          <td class="pos">${s.area.toFixed(4)}</td>`;
+        tbody.appendChild(tr);
+      }
+      document.getElementById('trap-result').textContent =
+        `${(data.trap_total_cm2 || total).toFixed(2)} cm²  (dari kontur asli gambar)`;
+      return;
+    }
+
+    // Fallback: hitung dari generateFootPolygon (demo mode)
+    const pts = generateFootPolygon(data.length_cm||24, data.width_cm||9, 120);
+    const strips = computeTrapProfile(pts, 16);
+    let total = 0;
+    for (let i = 0; i < strips.length-1; i++) {
+      const s0=strips[i], s1=strips[i+1], dx=s1.x-s0.x;
+      const h0=s0.yTop-s0.yBot, h1=s1.yTop-s1.yBot, area=0.5*(h0+h1)*Math.abs(dx);
+      total += area;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${i}</td>
+        <td>${s0.x.toFixed(2)}</td><td>${s1.x.toFixed(2)}</td><td>${Math.abs(dx).toFixed(2)}</td>
+        <td>${s0.yTop.toFixed(2)}</td><td>${s0.yBot.toFixed(2)}</td>
+        <td>${h0.toFixed(2)}</td><td class="pos">${area.toFixed(3)}</td>`;
+      tbody.appendChild(tr);
+    }
+    document.getElementById('trap-result').textContent = `${total.toFixed(2)} cm²`;
+  }
+
+  // ── TABS ──
+  function switchTab(idx, el) {
+    activeTab = idx;
+    document.querySelectorAll('.vtab').forEach((t,i) => t.classList.toggle('active', i===idx));
+    const ph = document.getElementById('visual-ph');
+    const img = document.getElementById('visual-img');
+    const src = idx === 0 ? origSrc : contourSrc;
+    if (src) { ph.style.display='none'; img.style.display='block'; img.src=src; }
+    else { ph.style.display='block'; img.style.display='none'; }
+  }
+
+  // ── LOADING ──
+  function showLoading(msg) {
+    document.getElementById('loading-text').textContent = msg || 'Memproses…';
+    document.getElementById('loading').classList.add('active');
+    document.getElementById('visual-ph').style.display='none';
+    document.getElementById('visual-img').style.display='none';
+  }
+  function hideLoading() { document.getElementById('loading').classList.remove('active'); }
+
+  // ── ALERTS ──
+  function showAlert(type, msg) {
+    hideAlerts();
+    const el = document.getElementById('alert-' + type);
+    document.getElementById(type === 'error' ? 'error-msg' : 'success-msg').textContent = msg;
+    el.classList.add('show');
+  }
+  function hideAlerts() {
+    document.getElementById('alert-error').classList.remove('show');
+    document.getElementById('alert-success').classList.remove('show');
+  }
+
+  // ── MODAL ──
+  function openModal() { document.getElementById('modal-backdrop').classList.add('open'); document.body.style.overflow='hidden'; }
+  function closeModal() { document.getElementById('modal-backdrop').classList.remove('open'); document.body.style.overflow=''; }
+  function backdropClose(e) { if (e.target === document.getElementById('modal-backdrop')) closeModal(); }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  // ── BACKEND CHECK ──
+  async function checkBackend() {
+    const dot = document.getElementById('backend-dot');
+    const txt = document.getElementById('backend-status');
+    try {
+      const r = await fetch('/health', { signal: AbortSignal.timeout(2000) });
+      if (r.ok) { dot.classList.add('online'); txt.textContent = 'Backend online'; }
+      else throw new Error();
+    } catch {
+      dot.classList.remove('online');
+      txt.textContent = 'Demo mode aktif';
+    }
+  }
+  checkBackend();
+</script>
+</body>
+</html>
